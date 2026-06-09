@@ -4892,6 +4892,7 @@ impl ModuleBuilder<'_, '_> {
                 def,
                 called_funs,
                 used_funs,
+                source_called_funs: None,
             };
             function_data.insert(fun_id, data);
         }
@@ -4932,6 +4933,7 @@ impl ModuleBuilder<'_, '_> {
                 def: None,
                 called_funs: Some(Default::default()),
                 used_funs: Some(Default::default()),
+                source_called_funs: None,
             };
             function_data.insert(fun_id, data);
         }

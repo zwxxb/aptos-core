@@ -2254,6 +2254,43 @@ impl GlobalEnv {
         self.call_graph_cache.invalidate();
     }
 
+    /// Capture each primary-target function's source-level call edges into
+    /// [`FunctionData::source_called_funs`], before the inliner rewrites bodies.
+    ///
+    /// The inliner expands `inline fun` call sites into their callers, after
+    /// which [`Self::set_function_def`] recomputes `called_funs` from the
+    /// rewritten body — erasing the edge to the inline function. This snapshot,
+    /// taken from each function's current `def` via [`ExpData::called_funs`],
+    /// preserves the pre-inline edges for consumers wanting a source-faithful
+    /// call graph (read via [`FunctionEnv::get_source_called_functions`]).
+    /// `set_function_def` does not touch `source_called_funs`, so it survives
+    /// every later pass.
+    ///
+    /// Scoped to primary target modules. Idempotent.
+    pub fn capture_source_called_funs(&mut self) {
+        // Two phases: collect under the shared borrow that `ModuleEnv` /
+        // `FunctionEnv` require, then write back through `&mut self`.
+        let captured: Vec<(QualifiedId<FunId>, BTreeSet<QualifiedId<FunId>>)> = self
+            .get_primary_target_modules()
+            .iter()
+            .flat_map(|module| module.get_functions())
+            .filter_map(|fun| {
+                fun.get_def()
+                    .map(|def| (fun.get_qualified_id(), def.called_funs()))
+            })
+            .collect();
+        for (fun, called) in captured {
+            let data = self
+                .module_data
+                .get_mut(fun.module_id.to_usize())
+                .unwrap()
+                .function_data
+                .get_mut(&fun.id)
+                .unwrap();
+            data.source_called_funs = Some(called);
+        }
+    }
+
     /// Sets the inferred acquired structs of this function.
     pub fn set_acquired_structs(&mut self, fun: QualifiedId<FunId>, acquires: BTreeSet<StructId>) {
         let data = self
@@ -2319,6 +2356,7 @@ impl GlobalEnv {
             def: Some(def),
             called_funs: Some(called_funs),
             used_funs: Some(used_funs),
+            source_called_funs: None,
         };
         assert!(self
             .module_data
@@ -2391,6 +2429,7 @@ impl GlobalEnv {
             def: Some(def),
             called_funs: Some(called_funs),
             used_funs: Some(used_funs),
+            source_called_funs: None,
         }
     }
 
@@ -4960,6 +4999,12 @@ pub struct FunctionData {
     /// The set of functions called or with values taken from this function's body.
     /// Local to this function — recomputed from `def` on `set_function_def`.
     pub(crate) used_funs: Option<BTreeSet<QualifiedId<FunId>>>,
+
+    /// Source-level callees captured before inlining (see
+    /// [`GlobalEnv::capture_source_called_funs`]). Unlike `called_funs`, this is
+    /// NOT recomputed by `set_function_def`, so it retains edges to `inline`
+    /// functions that the inliner expands away. `None` until captured.
+    pub(crate) source_called_funs: Option<BTreeSet<QualifiedId<FunId>>>,
 }
 
 /// Lazy caches for cross-function derivations over the call graph. The graph
@@ -5061,6 +5106,7 @@ impl FunctionData {
             def: None,
             called_funs: None,
             used_funs: None,
+            source_called_funs: None,
         }
     }
 }
@@ -6005,6 +6051,17 @@ impl<'env> FunctionEnv<'env> {
     /// Get the functions that this one calls, if available.
     pub fn get_called_functions(&self) -> Option<&'_ BTreeSet<QualifiedId<FunId>>> {
         self.data.called_funs.as_ref()
+    }
+
+    /// Get the functions this one calls in its source body, captured before the
+    /// inliner ran (see [`GlobalEnv::capture_source_called_funs`]).
+    ///
+    /// Unlike [`Self::get_called_functions`], this retains calls to `inline`
+    /// functions, which are erased from `called_funs` once the inliner expands
+    /// their bodies into callers. Returns `None` when no snapshot was captured
+    /// (e.g. native functions, or builds where the inliner did not run).
+    pub fn get_source_called_functions(&self) -> Option<&'_ BTreeSet<QualifiedId<FunId>>> {
+        self.data.source_called_funs.as_ref()
     }
 
     /// Get the transitive closure of the called functions. This requires that all functions

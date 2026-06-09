@@ -85,6 +85,12 @@ pub fn run_inlining(
     keep_inline_functions: bool,
     lift_inline_funs: bool,
 ) {
+    // Snapshot source-level call edges before any body is rewritten below, so a
+    // source-faithful call graph (with edges to `inline fun`s, which inlining
+    // erases from `called_funs`) survives. Read via
+    // `FunctionEnv::get_source_called_functions()`.
+    env.capture_source_called_funs();
+
     // Get function roots for running inlining.
     // Also generate errors for any invalid target inline functions.
     let mut targets = RewriteTargets::create(env, scope);
