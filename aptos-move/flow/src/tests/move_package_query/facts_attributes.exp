@@ -1,0 +1,72 @@
+{
+  "0xcafe::groups": {
+    "file": "<TEMPDIR>/groups.move",
+    "span": [
+      1,
+      7
+    ],
+    "friends": [],
+    "attributes": [],
+    "hasSpecs": false,
+    "functions": [],
+    "types": [
+      {
+        "kind": "struct",
+        "name": "Member",
+        "file": "<TEMPDIR>/groups.move",
+        "span": [
+          6,
+          6
+        ],
+        "abilities": [
+          "key"
+        ],
+        "typeParams": [],
+        "fields": [
+          {
+            "name": "value",
+            "type": "u64",
+            "positional": false
+          }
+        ],
+        "attributes": [
+          {
+            "name": "resource_group_member",
+            "args": [
+              {
+                "name": "group",
+                "value": "0xcafe::groups::Registry"
+              }
+            ]
+          }
+        ],
+        "hasSpec": false
+      },
+      {
+        "kind": "struct",
+        "name": "Registry",
+        "file": "<TEMPDIR>/groups.move",
+        "span": [
+          3,
+          3
+        ],
+        "abilities": [],
+        "typeParams": [],
+        "fields": [],
+        "attributes": [
+          {
+            "name": "resource_group",
+            "args": [
+              {
+                "name": "scope",
+                "value": "global"
+              }
+            ]
+          }
+        ],
+        "hasSpec": false
+      }
+    ],
+    "constants": []
+  }
+}

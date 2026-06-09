@@ -1,0 +1,50 @@
+{
+  "0xcafe::store": {
+    "file": "<TEMPDIR>/store.move",
+    "span": [
+      1,
+      6
+    ],
+    "friends": [],
+    "attributes": [],
+    "hasSpecs": false,
+    "functions": [],
+    "types": [
+      {
+        "kind": "struct",
+        "name": "Box",
+        "file": "<TEMPDIR>/store.move",
+        "span": [
+          2,
+          5
+        ],
+        "abilities": [
+          "store",
+          "key"
+        ],
+        "typeParams": [
+          {
+            "name": "T",
+            "abilities": [],
+            "isPhantom": true
+          }
+        ],
+        "fields": [
+          {
+            "name": "owner",
+            "type": "address",
+            "positional": false
+          },
+          {
+            "name": "amount",
+            "type": "u64",
+            "positional": false
+          }
+        ],
+        "attributes": [],
+        "hasSpec": false
+      }
+    ],
+    "constants": []
+  }
+}

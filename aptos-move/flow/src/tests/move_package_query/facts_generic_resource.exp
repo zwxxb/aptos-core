@@ -1,0 +1,194 @@
+{
+  "0xcafe::store": {
+    "file": "<TEMPDIR>/store.move",
+    "span": [
+      1,
+      17
+    ],
+    "friends": [],
+    "attributes": [],
+    "hasSpecs": false,
+    "functions": [
+      {
+        "name": "get",
+        "file": "<TEMPDIR>/store.move",
+        "span": [
+          10,
+          12
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [
+          {
+            "name": "T",
+            "abilities": [],
+            "isPhantom": false
+          }
+        ],
+        "params": [
+          {
+            "name": "addr",
+            "type": "address"
+          }
+        ],
+        "returnType": "u64",
+        "declaredAccess": [
+          {
+            "kind": "legacy_acquires",
+            "resource": {
+              "form": "struct",
+              "value": "0xcafe::store::Box"
+            },
+            "negated": false
+          }
+        ],
+        "acquiresInferred": [
+          "0xcafe::store::Box"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::store::Box<#0>"
+          ],
+          "writes": []
+        },
+        "hasSpec": false
+      },
+      {
+        "name": "get_marker",
+        "file": "<TEMPDIR>/store.move",
+        "span": [
+          14,
+          16
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "addr",
+            "type": "address"
+          }
+        ],
+        "returnType": "u64",
+        "declaredAccess": [
+          {
+            "kind": "legacy_acquires",
+            "resource": {
+              "form": "struct",
+              "value": "0xcafe::store::Box"
+            },
+            "negated": false
+          }
+        ],
+        "acquiresInferred": [
+          "0xcafe::store::Box"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::store::Box<0xcafe::store::Marker>"
+          ],
+          "writes": []
+        },
+        "hasSpec": false
+      },
+      {
+        "name": "put",
+        "file": "<TEMPDIR>/store.move",
+        "span": [
+          6,
+          8
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [
+          {
+            "name": "T",
+            "abilities": [],
+            "isPhantom": false
+          }
+        ],
+        "params": [
+          {
+            "name": "account",
+            "type": "&signer"
+          },
+          {
+            "name": "value",
+            "type": "u64"
+          }
+        ],
+        "returnType": null,
+        "declaredAccess": [],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": [
+            "0xcafe::store::Box<#0>"
+          ]
+        },
+        "hasSpec": false
+      }
+    ],
+    "types": [
+      {
+        "kind": "struct",
+        "name": "Box",
+        "file": "<TEMPDIR>/store.move",
+        "span": [
+          4,
+          4
+        ],
+        "abilities": [
+          "key"
+        ],
+        "typeParams": [
+          {
+            "name": "T",
+            "abilities": [],
+            "isPhantom": true
+          }
+        ],
+        "fields": [
+          {
+            "name": "value",
+            "type": "u64",
+            "positional": false
+          }
+        ],
+        "attributes": [],
+        "hasSpec": false
+      },
+      {
+        "kind": "struct",
+        "name": "Marker",
+        "file": "<TEMPDIR>/store.move",
+        "span": [
+          2,
+          2
+        ],
+        "abilities": [
+          "copy",
+          "drop",
+          "store"
+        ],
+        "typeParams": [],
+        "fields": [],
+        "attributes": [],
+        "hasSpec": false
+      }
+    ],
+    "constants": []
+  }
+}

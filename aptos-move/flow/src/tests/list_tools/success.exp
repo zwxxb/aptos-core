@@ -97,6 +97,11 @@
               "description": "Returns direct and transitive calls/uses by a given function.\n\"called\" = direct calls; \"used\" = direct calls + closure captures.",
               "type": "string",
               "const": "function_usage"
+            },
+            {
+              "description": "Returns structured facts per module: source locations, friends,\nattributes, function metadata (visibility/entry/view/native/inline),\ntype/parameter/return signatures, declared access specifiers, inferred\nacquires, AST-derived resource reads/writes, enum variants, and spec\npresence. Designed for indexing and governance gates.",
+              "type": "string",
+              "const": "facts"
             }
           ]
         }

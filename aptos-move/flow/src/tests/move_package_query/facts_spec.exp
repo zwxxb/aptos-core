@@ -1,0 +1,109 @@
+{
+  "0xcafe::ledger": {
+    "file": "<TEMPDIR>/ledger.move",
+    "span": [
+      1,
+      16
+    ],
+    "friends": [],
+    "attributes": [],
+    "hasSpecs": true,
+    "functions": [
+      {
+        "name": "deposit",
+        "file": "<TEMPDIR>/ledger.move",
+        "span": [
+          7,
+          10
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "addr",
+            "type": "address"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ],
+        "returnType": null,
+        "declaredAccess": [
+          {
+            "kind": "legacy_acquires",
+            "resource": {
+              "form": "struct",
+              "value": "0xcafe::ledger::Account"
+            },
+            "negated": false
+          }
+        ],
+        "acquiresInferred": [
+          "0xcafe::ledger::Account"
+        ],
+        "resourceAccess": {
+          "reads": [],
+          "writes": [
+            "0xcafe::ledger::Account"
+          ]
+        },
+        "hasSpec": true
+      },
+      {
+        "name": "pure_fn",
+        "file": "<TEMPDIR>/ledger.move",
+        "span": [
+          15,
+          15
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [],
+        "returnType": "u64",
+        "declaredAccess": [],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "hasSpec": false
+      }
+    ],
+    "types": [
+      {
+        "kind": "struct",
+        "name": "Account",
+        "file": "<TEMPDIR>/ledger.move",
+        "span": [
+          2,
+          2
+        ],
+        "abilities": [
+          "key"
+        ],
+        "typeParams": [],
+        "fields": [
+          {
+            "name": "balance",
+            "type": "u64",
+            "positional": false
+          }
+        ],
+        "attributes": [],
+        "hasSpec": true
+      }
+    ],
+    "constants": []
+  }
+}

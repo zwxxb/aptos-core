@@ -1,0 +1,15 @@
+{
+  "0xcafe::empty": {
+    "file": "<TEMPDIR>/empty.move",
+    "span": [
+      1,
+      1
+    ],
+    "friends": [],
+    "attributes": [],
+    "hasSpecs": false,
+    "functions": [],
+    "types": [],
+    "constants": []
+  }
+}
