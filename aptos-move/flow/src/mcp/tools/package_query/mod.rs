@@ -13,6 +13,10 @@ use rmcp::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 
+mod facts;
+
+use facts::{build_facts, dummy_field_symbol, is_dummy_field};
+
 // ========== MCP Tool types ==========
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
@@ -37,6 +41,12 @@ enum QueryType {
     /// Returns direct and transitive calls/uses by a given function.
     /// "called" = direct calls; "used" = direct calls + closure captures.
     FunctionUsage,
+    /// Returns structured facts per module: source locations, friends,
+    /// attributes, function metadata (visibility/entry/view/native/inline),
+    /// type/parameter/return signatures, declared access specifiers, inferred
+    /// acquires, AST-derived resource reads/writes, enum variants, and spec
+    /// presence. Designed for indexing and governance gates.
+    Facts,
 }
 
 // ========== MCP Tool ==========
@@ -97,6 +107,11 @@ impl FlowSession {
                 log::info!("move_package_query function_usage({})", function);
                 Ok(into_call_tool_result(&result))
             },
+            QueryType::Facts => {
+                let result = build_facts(data.env());
+                log::info!("move_package_query facts: {} module(s)", result.len());
+                Ok(into_call_tool_result(&result))
+            },
         }
     }
 }
@@ -141,9 +156,23 @@ struct ConstantSummary {
 }
 
 #[derive(Debug, serde::Serialize)]
-struct StructSummary {
+#[serde(tag = "kind", rename_all = "lowercase")]
+enum StructSummary {
+    Struct {
+        name: String,
+        abilities: Vec<String>,
+        fields: Vec<String>,
+    },
+    Enum {
+        name: String,
+        abilities: Vec<String>,
+        variants: Vec<VariantSummary>,
+    },
+}
+
+#[derive(Debug, serde::Serialize)]
+struct VariantSummary {
     name: String,
-    abilities: Vec<String>,
     fields: Vec<String>,
 }
 
@@ -155,6 +184,7 @@ struct FunctionSummary {
 
 /// Build a summary of each target module's constants, structs, and functions.
 fn build_module_summary(env: &GlobalEnv) -> BTreeMap<String, ModuleSummary> {
+    let dummy = dummy_field_symbol(env);
     env.get_primary_target_modules()
         .iter()
         .map(|module| {
@@ -173,6 +203,18 @@ fn build_module_summary(env: &GlobalEnv) -> BTreeMap<String, ModuleSummary> {
                 })
                 .collect();
 
+            // Renders one struct field as "name: type", filtering out the
+            // legacy compiler's synthetic `dummy_field: bool` (see facts.rs).
+            let render_field = |f: move_model::model::FieldEnv<'_>| {
+                (!is_dummy_field(&f, dummy)).then(|| {
+                    format!(
+                        "{}: {}",
+                        f.get_name().display(env.symbol_pool()),
+                        f.get_type().display(&type_ctx)
+                    )
+                })
+            };
+
             let structs: Vec<StructSummary> = module
                 .get_structs()
                 .map(|s| {
@@ -181,20 +223,29 @@ fn build_module_summary(env: &GlobalEnv) -> BTreeMap<String, ModuleSummary> {
                         .into_iter()
                         .map(|a| a.to_string())
                         .collect();
-                    let fields: Vec<String> = s
-                        .get_fields()
-                        .map(|f| {
-                            format!(
-                                "{}: {}",
-                                f.get_name().display(env.symbol_pool()),
-                                f.get_type().display(&type_ctx)
-                            )
-                        })
-                        .collect();
-                    StructSummary {
-                        name: s.get_name().display(env.symbol_pool()).to_string(),
-                        abilities,
-                        fields,
+                    let name = s.get_name().display(env.symbol_pool()).to_string();
+                    if s.has_variants() {
+                        let variants: Vec<VariantSummary> = s
+                            .get_variants()
+                            .map(|v| VariantSummary {
+                                name: v.display(env.symbol_pool()).to_string(),
+                                fields: s
+                                    .get_fields_of_variant(v)
+                                    .filter_map(render_field)
+                                    .collect(),
+                            })
+                            .collect();
+                        StructSummary::Enum {
+                            name,
+                            abilities,
+                            variants,
+                        }
+                    } else {
+                        StructSummary::Struct {
+                            name,
+                            abilities,
+                            fields: s.get_fields().filter_map(render_field).collect(),
+                        }
                     }
                 })
                 .collect();

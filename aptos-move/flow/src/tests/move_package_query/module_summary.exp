@@ -9,6 +9,7 @@
     ],
     "structs": [
       {
+        "kind": "struct",
         "name": "Token",
         "abilities": [
           "store",
