@@ -1,0 +1,69 @@
+{
+  "0xcafe::shapes": {
+    "file": "<TEMPDIR>/shapes.move",
+    "span": [
+      1,
+      7
+    ],
+    "friends": [],
+    "attributes": [],
+    "hasSpecs": false,
+    "functions": [],
+    "types": [
+      {
+        "kind": "enum",
+        "name": "Shape",
+        "file": "<TEMPDIR>/shapes.move",
+        "span": [
+          2,
+          6
+        ],
+        "abilities": [
+          "copy",
+          "drop"
+        ],
+        "typeParams": [],
+        "variants": [
+          {
+            "name": "Circle",
+            "kind": "named",
+            "fields": [
+              {
+                "name": "radius",
+                "type": "u64",
+                "positional": false
+              }
+            ],
+            "attributes": []
+          },
+          {
+            "name": "Rectangle",
+            "kind": "named",
+            "fields": [
+              {
+                "name": "width",
+                "type": "u64",
+                "positional": false
+              },
+              {
+                "name": "height",
+                "type": "u64",
+                "positional": false
+              }
+            ],
+            "attributes": []
+          },
+          {
+            "name": "Empty",
+            "kind": "unit",
+            "fields": [],
+            "attributes": []
+          }
+        ],
+        "attributes": [],
+        "hasSpec": false
+      }
+    ],
+    "constants": []
+  }
+}

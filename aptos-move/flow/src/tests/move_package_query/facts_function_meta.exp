@@ -1,0 +1,89 @@
+{
+  "0xcafe::calc": {
+    "file": "<TEMPDIR>/calc.move",
+    "span": [
+      1,
+      8
+    ],
+    "friends": [],
+    "attributes": [],
+    "hasSpecs": false,
+    "functions": [
+      {
+        "name": "magic",
+        "file": "<TEMPDIR>/calc.move",
+        "span": [
+          7,
+          7
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": true,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [],
+        "returnType": "u64",
+        "declaredAccess": [],
+        "acquiresInferred": null,
+        "resourceAccess": null,
+        "hasSpec": false
+      },
+      {
+        "name": "noop",
+        "file": "<TEMPDIR>/calc.move",
+        "span": [
+          5,
+          5
+        ],
+        "visibility": "public",
+        "isEntry": true,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [],
+        "returnType": null,
+        "declaredAccess": [],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "hasSpec": false
+      },
+      {
+        "name": "zero",
+        "file": "<TEMPDIR>/calc.move",
+        "span": [
+          3,
+          3
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": true,
+        "attributes": [
+          {
+            "name": "view"
+          }
+        ],
+        "typeParams": [],
+        "params": [],
+        "returnType": "u64",
+        "declaredAccess": [],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "hasSpec": false
+      }
+    ],
+    "types": [],
+    "constants": []
+  }
+}

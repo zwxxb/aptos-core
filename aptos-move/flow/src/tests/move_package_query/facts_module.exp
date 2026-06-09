@@ -1,0 +1,43 @@
+{
+  "0xcafe::core": {
+    "file": "<TEMPDIR>/core.move",
+    "span": [
+      1,
+      6
+    ],
+    "friends": [
+      {
+        "module": "0xcafe::helper"
+      }
+    ],
+    "attributes": [],
+    "hasSpecs": false,
+    "functions": [],
+    "types": [],
+    "constants": [
+      {
+        "name": "MAGIC",
+        "type": "u64",
+        "value": "42"
+      },
+      {
+        "name": "NAME",
+        "type": "vector<u8>",
+        "value": "[99, 111, 114, 101]"
+      }
+    ]
+  },
+  "0xcafe::helper": {
+    "file": "<TEMPDIR>/helper.move",
+    "span": [
+      1,
+      1
+    ],
+    "friends": [],
+    "attributes": [],
+    "hasSpecs": false,
+    "functions": [],
+    "types": [],
+    "constants": []
+  }
+}
