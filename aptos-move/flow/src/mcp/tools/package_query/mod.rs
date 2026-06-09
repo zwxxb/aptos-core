@@ -7,7 +7,7 @@ use super::super::{
     common::{mcp_err, resolve_function, tool_error, try_call},
     session::{into_call_tool_result, FlowSession},
 };
-use move_model::model::{FunId, GlobalEnv, QualifiedId};
+use move_model::model::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
 use rmcp::{
     handler::server::wrapper::Parameters, model::CallToolResult, schemars, tool, tool_router,
 };
@@ -270,23 +270,35 @@ fn build_module_summary(env: &GlobalEnv) -> BTreeMap<String, ModuleSummary> {
 // ========== Query: call_graph ==========
 
 /// Returns an adjacency map: function name → set of called function names.
+///
+/// Edges are inline-aware (see [`direct_callees`]): after the inliner expands
+/// an `inline fun`, its call site vanishes from `get_called_functions`; the
+/// pre-inline source snapshot restores it.
 fn build_call_graph(env: &GlobalEnv) -> BTreeMap<String, BTreeSet<String>> {
     env.get_primary_target_modules()
         .iter()
         .flat_map(|module| module.get_functions())
         .map(|func| {
             let name = func.get_full_name_with_address();
-            let callees: BTreeSet<String> = func
-                .get_called_functions()
-                .map(|funs| {
-                    funs.iter()
-                        .map(|qid| env.get_function(*qid).get_full_name_with_address())
-                        .collect()
-                })
-                .unwrap_or_default();
-            (name, callees)
+            (name, qids_to_names(env, &direct_callees(&func)))
         })
         .collect()
+}
+
+/// All functions directly called by `func`, including `inline fun` targets.
+///
+/// Unions the post-inline `called_funs` with the pre-inline
+/// `source_called_funs` snapshot: inlining erases inline call sites from
+/// `called_funs` (the snapshot restores them) but also pulls in edges from the
+/// inlined callees (only `called_funs` has those). When no snapshot was
+/// captured (the inliner did not run), `called_funs` already holds the source
+/// edges, so the union degrades to it.
+fn direct_callees(func: &FunctionEnv<'_>) -> BTreeSet<QualifiedId<FunId>> {
+    let mut callees = func.get_called_functions().cloned().unwrap_or_default();
+    if let Some(source) = func.get_source_called_functions() {
+        callees.extend(source.iter().copied());
+    }
+    callees
 }
 
 // ========== Query: function_usage ==========

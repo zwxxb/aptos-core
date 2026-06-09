@@ -3,6 +3,7 @@
 
 mod call_graph;
 mod call_graph_closure;
+mod call_graph_inline;
 mod call_graph_leaf;
 mod dep_graph;
 mod dep_graph_no_deps;
@@ -13,6 +14,7 @@ mod facts_empty;
 mod facts_enum;
 mod facts_function_meta;
 mod facts_generic_resource;
+mod facts_inline;
 mod facts_module;
 mod facts_resource_access;
 mod facts_spec;

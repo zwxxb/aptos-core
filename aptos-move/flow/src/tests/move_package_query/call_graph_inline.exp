@@ -1,0 +1,10 @@
+{
+  "0xcafe::vault::helper": [],
+  "0xcafe::vault::peek": [
+    "0xcafe::vault::helper"
+  ],
+  "0xcafe::vault::use_peek": [
+    "0xcafe::vault::helper",
+    "0xcafe::vault::peek"
+  ]
+}
