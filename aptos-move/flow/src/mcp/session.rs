@@ -38,7 +38,8 @@ impl FlowSession {
     /// Add new tool routers here — this is the single source of truth used by
     /// both `new()` and `tool_names()`.
     fn all_tool_routers() -> ToolRouter<Self> {
-        Self::package_manifest_router()
+        Self::package_facts_router()
+            + Self::package_manifest_router()
             + Self::package_query_router()
             + Self::package_spec_infer_router()
             + Self::package_status_router()
@@ -247,4 +248,12 @@ impl ServerHandler for FlowSession {
 pub(crate) fn into_call_tool_result<T: Serialize>(value: &T) -> CallToolResult {
     let json = serde_json::to_string_pretty(value).expect("serde_json serialization failed");
     CallToolResult::success(vec![Content::text(json)])
+}
+
+/// Like [`into_call_tool_result`], but emits the value as typed
+/// `structuredContent` rather than stringified JSON text. Used by the v2
+/// `move_package_facts` tool so consumers read a typed channel.
+pub(crate) fn into_structured_call_tool_result<T: Serialize>(value: &T) -> CallToolResult {
+    let json = serde_json::to_value(value).expect("serde_json serialization failed");
+    CallToolResult::structured(json)
 }

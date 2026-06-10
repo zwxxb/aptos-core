@@ -3317,7 +3317,7 @@ dependencies = [
 
 [[package]]
 name = "aptos-move-flow"
-version = "1.0.4"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "aptos-cli-common",
@@ -3335,6 +3335,7 @@ dependencies = [
  "aptos-vm-types",
  "async-trait",
  "clap 4.5.60",
+ "codespan",
  "codespan-reporting",
  "legacy-move-compiler",
  "log",
@@ -3360,6 +3361,7 @@ dependencies = [
  "tempfile",
  "tera",
  "tokio",
+ "toml 0.7.8",
  "tracing-log",
  "url",
  "walkdir",

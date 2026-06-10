@@ -1,6 +1,8 @@
 // Copyright (c) Aptos Foundation
 // Licensed pursuant to the Innovation-Enabling Source Code License, available at https://github.com/aptos-labs/aptos-core/blob/main/LICENSE
 
+mod facts;
+mod package_facts;
 mod package_manifest;
 mod package_query;
 mod package_spec_infer;
