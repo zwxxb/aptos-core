@@ -1,0 +1,127 @@
+{
+  "0xcafe::vault": {
+    "file": "<TEMPDIR>/vault.move",
+    "span": [
+      1,
+      11
+    ],
+    "friends": [],
+    "attributes": [],
+    "hasSpecs": false,
+    "functions": [
+      {
+        "name": "read",
+        "file": "<TEMPDIR>/vault.move",
+        "span": [
+          4,
+          6
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "addr",
+            "type": "address"
+          }
+        ],
+        "returnType": "u64",
+        "declaredAccess": [
+          {
+            "kind": "legacy_acquires",
+            "resource": {
+              "form": "struct",
+              "value": "0xcafe::vault::Coin"
+            },
+            "negated": false
+          }
+        ],
+        "acquiresInferred": [
+          "0xcafe::vault::Coin"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::vault::Coin"
+          ],
+          "writes": []
+        },
+        "hasSpec": false
+      },
+      {
+        "name": "write",
+        "file": "<TEMPDIR>/vault.move",
+        "span": [
+          8,
+          10
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "addr",
+            "type": "address"
+          },
+          {
+            "name": "v",
+            "type": "u64"
+          }
+        ],
+        "returnType": null,
+        "declaredAccess": [
+          {
+            "kind": "legacy_acquires",
+            "resource": {
+              "form": "struct",
+              "value": "0xcafe::vault::Coin"
+            },
+            "negated": false
+          }
+        ],
+        "acquiresInferred": [
+          "0xcafe::vault::Coin"
+        ],
+        "resourceAccess": {
+          "reads": [],
+          "writes": [
+            "0xcafe::vault::Coin"
+          ]
+        },
+        "hasSpec": false
+      }
+    ],
+    "types": [
+      {
+        "kind": "struct",
+        "name": "Coin",
+        "file": "<TEMPDIR>/vault.move",
+        "span": [
+          2,
+          2
+        ],
+        "abilities": [
+          "key"
+        ],
+        "typeParams": [],
+        "fields": [
+          {
+            "name": "value",
+            "type": "u64",
+            "positional": false
+          }
+        ],
+        "attributes": [],
+        "hasSpec": false
+      }
+    ],
+    "constants": []
+  }
+}

@@ -1,0 +1,217 @@
+{
+  "0xcafe::bank": {
+    "file": "<TEMPDIR>/bank.move",
+    "span": [
+      1,
+      21
+    ],
+    "friends": [],
+    "attributes": [],
+    "hasSpecs": false,
+    "functions": [
+      {
+        "name": "publish",
+        "file": "<TEMPDIR>/bank.move",
+        "span": [
+          4,
+          6
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "account",
+            "type": "&signer"
+          },
+          {
+            "name": "value",
+            "type": "u64"
+          }
+        ],
+        "returnType": null,
+        "declaredAccess": [],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": [
+            "0xcafe::bank::Coin"
+          ]
+        },
+        "hasSpec": false
+      },
+      {
+        "name": "bump",
+        "file": "<TEMPDIR>/bank.move",
+        "span": [
+          12,
+          14
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "addr",
+            "type": "address"
+          }
+        ],
+        "returnType": null,
+        "declaredAccess": [
+          {
+            "kind": "legacy_acquires",
+            "resource": {
+              "form": "struct",
+              "value": "0xcafe::bank::Coin"
+            },
+            "negated": false
+          }
+        ],
+        "acquiresInferred": [
+          "0xcafe::bank::Coin"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::bank::Coin"
+          ],
+          "writes": [
+            "0xcafe::bank::Coin"
+          ]
+        },
+        "hasSpec": false
+      },
+      {
+        "name": "has_coin",
+        "file": "<TEMPDIR>/bank.move",
+        "span": [
+          16,
+          18
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "addr",
+            "type": "address"
+          }
+        ],
+        "returnType": "bool",
+        "declaredAccess": [],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::bank::Coin"
+          ],
+          "writes": []
+        },
+        "hasSpec": false
+      },
+      {
+        "name": "mystery_take",
+        "file": "<TEMPDIR>/bank.move",
+        "span": [
+          20,
+          20
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": true,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "addr",
+            "type": "address"
+          }
+        ],
+        "returnType": "Coin",
+        "declaredAccess": [],
+        "acquiresInferred": null,
+        "resourceAccess": null,
+        "hasSpec": false
+      },
+      {
+        "name": "peek",
+        "file": "<TEMPDIR>/bank.move",
+        "span": [
+          8,
+          10
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "addr",
+            "type": "address"
+          }
+        ],
+        "returnType": "u64",
+        "declaredAccess": [
+          {
+            "kind": "legacy_acquires",
+            "resource": {
+              "form": "struct",
+              "value": "0xcafe::bank::Coin"
+            },
+            "negated": false
+          }
+        ],
+        "acquiresInferred": [
+          "0xcafe::bank::Coin"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::bank::Coin"
+          ],
+          "writes": []
+        },
+        "hasSpec": false
+      }
+    ],
+    "types": [
+      {
+        "kind": "struct",
+        "name": "Coin",
+        "file": "<TEMPDIR>/bank.move",
+        "span": [
+          2,
+          2
+        ],
+        "abilities": [
+          "key"
+        ],
+        "typeParams": [],
+        "fields": [
+          {
+            "name": "value",
+            "type": "u64",
+            "positional": false
+          }
+        ],
+        "attributes": [],
+        "hasSpec": false
+      }
+    ],
+    "constants": []
+  }
+}

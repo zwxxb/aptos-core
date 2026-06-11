@@ -1,0 +1,45 @@
+{
+  "0xcafe::shapes": {
+    "constants": [],
+    "structs": [
+      {
+        "kind": "struct",
+        "name": "Holder",
+        "abilities": [
+          "key"
+        ],
+        "fields": [
+          "shape: Shape"
+        ]
+      },
+      {
+        "kind": "enum",
+        "name": "Shape",
+        "abilities": [
+          "copy",
+          "drop"
+        ],
+        "variants": [
+          {
+            "name": "Circle",
+            "fields": [
+              "radius: u64"
+            ]
+          },
+          {
+            "name": "Rectangle",
+            "fields": [
+              "width: u64",
+              "height: u64"
+            ]
+          },
+          {
+            "name": "Empty",
+            "fields": []
+          }
+        ]
+      }
+    ],
+    "functions": []
+  }
+}
