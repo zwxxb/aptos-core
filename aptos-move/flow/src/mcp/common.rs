@@ -4,7 +4,10 @@
 //! Common helpers shared across MCP tool implementations.
 
 use aptos_types::account_address::AccountAddress;
-use move_model::model::{FunctionEnv, GlobalEnv};
+use move_model::{
+    ast::Address,
+    model::{FunctionEnv, GlobalEnv},
+};
 use rmcp::model::{CallToolResult, Content};
 use std::fmt::Write;
 
@@ -65,19 +68,39 @@ pub(crate) fn resolve_function<'a>(
     };
 
     let module_sym = env.symbol_pool().make(module_name);
-    let module = env
+    let mut matches: Vec<_> = env
         .get_primary_target_modules()
         .into_iter()
-        .find(|m| {
-            m.get_name().name() == module_sym
-                && addr_filter.is_none_or(|a| m.self_address().expect_numerical() == a)
+        .filter(|m| {
+            if m.get_name().name() != module_sym {
+                return false;
+            }
+            match addr_filter {
+                None => true,
+                Some(a) => matches!(m.self_address(), Address::Numerical(na) if *na == a),
+            }
         })
-        .ok_or_else(|| {
-            mcp_invalid(format!(
+        .collect();
+    let module = match matches.len() {
+        0 => {
+            return Err(mcp_invalid(format!(
                 "no module `{}` found in the target package",
                 module_name
-            ))
-        })?;
+            )))
+        },
+        1 => matches.remove(0),
+        _ => {
+            let names = matches
+                .iter()
+                .map(|m| m.get_full_name_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Err(mcp_invalid(format!(
+                "module name `{}` is ambiguous in the target package: {}; qualify with an address",
+                module_name, names
+            )));
+        },
+    };
     let func_sym = env.symbol_pool().make(func_name);
     module.find_function(func_sym).ok_or_else(|| {
         mcp_invalid(format!(

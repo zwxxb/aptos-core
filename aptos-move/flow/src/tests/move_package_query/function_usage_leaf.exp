@@ -1,6 +1,8 @@
 {
   "called": [],
-  "called_transitive": [],
+  "calledTransitive": [],
   "used": [],
-  "used_transitive": []
+  "usedTransitive": [],
+  "createsClosures": [],
+  "invokesFunctionValues": false
 }

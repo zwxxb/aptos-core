@@ -5,6 +5,7 @@
 
 use super::super::{
     common::{mcp_err, resolve_function, tool_error, try_call},
+    package_data::PackageData,
     session::{into_call_tool_result, FlowSession},
 };
 use move_compiler_v2::env_pipeline::lambda_lifter::is_lambda_lifted_fun as is_lambda_lifted;
@@ -63,10 +64,16 @@ enum QueryType {
     DepGraph,
     /// Returns a summary of each module's constants, structs, and functions.
     ModuleSummary,
-    /// Returns a function-level call graph as a map from each function to the functions it calls.
+    /// Returns a function-level call graph as a map from each function to the
+    /// functions it statically calls. Function-value invocations and closure
+    /// creations are not edges; see the facts query's `invokesFunctionValues`
+    /// and `createsClosures` for those.
     CallGraph,
     /// Returns direct and transitive calls/uses by a given function.
     /// "called" = direct calls; "used" = direct calls + closure captures.
+    /// `createsClosures` lists functions for which the body creates closures.
+    /// `invokesFunctionValues` is true when the body invokes a function value
+    /// whose target is not statically known; `called`/`used` are lower bounds then.
     FunctionUsage,
     /// Returns per-module facts: functions, structs, constants, friends,
     /// attributes, and source locations.
@@ -116,6 +123,7 @@ impl FlowSession {
                 Ok(into_call_tool_result(&result))
             },
             QueryType::CallGraph => {
+                ensure_no_compilation_errors(&data, "call_graph")?;
                 let result = build_call_graph(data.env());
                 log::info!(
                     "move_package_query call_graph: {} function(s)",
@@ -124,6 +132,7 @@ impl FlowSession {
                 Ok(into_call_tool_result(&result))
             },
             QueryType::FunctionUsage => {
+                ensure_no_compilation_errors(&data, "function_usage")?;
                 let function = params.function.ok_or_else(|| {
                     mcp_err("\"function\" parameter is required for function_usage query")
                 })?;
@@ -132,18 +141,32 @@ impl FlowSession {
                 Ok(into_call_tool_result(&result))
             },
             QueryType::Facts => {
-                if data.has_compilation_errors() {
-                    return Err(mcp_err(
-                        "package has compilation errors; facts would reflect a partially \
-                         compiled package. Run move_package_status for diagnostics",
-                    ));
-                }
+                ensure_no_compilation_errors(&data, "facts")?;
                 let result = try_call("failed to build facts", || build_facts(data.env()))?;
                 log::info!("move_package_query facts: {} module(s)", result.len());
                 Ok(into_call_tool_result(&result))
             },
         }
     }
+}
+
+/// Return an error when the package has compilation errors, since semantic
+/// queries would reflect a partially compiled model and produce misleading
+/// results (e.g. `get_called_functions()` silently returns empty for
+/// error-failed functions, shrinking the graph without any signal).
+/// Structural queries (`dep_graph`, `module_summary`) are not gated because
+/// they do not rely on body-level compiler analysis.
+fn ensure_no_compilation_errors(
+    data: &PackageData,
+    query: &str,
+) -> Result<(), rmcp::ErrorData> {
+    if data.has_compilation_errors() {
+        return Err(mcp_err(format!(
+            "package has compilation errors; {query} would reflect a partially \
+             compiled package. Run move_package_status for diagnostics"
+        )));
+    }
+    Ok(())
 }
 
 // ========== Query: dep_graph ==========
@@ -283,16 +306,24 @@ fn build_call_graph(env: &GlobalEnv) -> BTreeMap<String, BTreeSet<String>> {
 // ========== Query: function_usage ==========
 
 #[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct FunctionUsage {
     called: BTreeSet<String>,
     called_transitive: BTreeSet<String>,
     used: BTreeSet<String>,
     used_transitive: BTreeSet<String>,
+    /// Functions for which the queried function's body creates closures.
+    creates_closures: BTreeSet<String>,
+    /// True if the body invokes a function value whose target is not
+    /// statically known; `called`/`used` are lower bounds then.
+    invokes_function_values: bool,
 }
 
 /// Build function usage for a given function.
 fn build_function_usage(env: &GlobalEnv, function: &str) -> Result<FunctionUsage, rmcp::ErrorData> {
     let func = resolve_function(env, function)?;
+    let type_ctx = qualified_type_ctx(func.get_type_display_ctx());
+    let scan = scan_body(env, &func, &type_ctx);
 
     let called = func.get_called_functions().cloned().unwrap_or_default();
     let used = func.get_used_functions().cloned().unwrap_or_default();
@@ -310,6 +341,8 @@ fn build_function_usage(env: &GlobalEnv, function: &str) -> Result<FunctionUsage
         called_transitive: qids_to_names(env, &called_transitive),
         used: qids_to_names(env, &used),
         used_transitive: qids_to_names(env, &used_transitive),
+        creates_closures: scan.creates_closures,
+        invokes_function_values: scan.invokes_function_values,
     })
 }
 
@@ -764,7 +797,7 @@ fn build_function_facts(
     let is_view = func
         .get_attributes()
         .iter()
-        .any(|a| symbol_pool.string(a.name()).as_str() == "view");
+        .any(|a| matches!(a, Attribute::Apply(..)) && symbol_pool.string(a.name()).as_str() == "view");
 
     FunctionFacts {
         name: func.get_name_str(),

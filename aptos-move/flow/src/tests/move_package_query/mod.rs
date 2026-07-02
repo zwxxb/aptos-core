@@ -3,6 +3,7 @@
 
 mod call_graph;
 mod call_graph_closure;
+mod call_graph_compile_error;
 mod call_graph_leaf;
 mod dep_graph;
 mod dep_graph_no_deps;
@@ -23,6 +24,7 @@ mod facts_spec_block;
 mod function_usage;
 mod function_usage_bad_format;
 mod function_usage_bad_function;
+mod function_usage_ambiguous_module;
 mod function_usage_bad_module;
 mod function_usage_closure;
 mod function_usage_leaf;
