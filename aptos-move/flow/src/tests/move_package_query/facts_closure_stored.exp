@@ -36,6 +36,8 @@
           "u64"
         ],
         "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [
           "0xcafe::stored::Config"
         ],
@@ -72,6 +74,8 @@
         ],
         "returnTypes": [],
         "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [
           "0xcafe::stored::Holder"
         ],
@@ -105,6 +109,8 @@
         "params": [],
         "returnTypes": [],
         "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [
           "0xcafe::stored::Config",
           "0xcafe::stored::Holder"

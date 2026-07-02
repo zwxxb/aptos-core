@@ -7,6 +7,7 @@ mod call_graph_leaf;
 mod dep_graph;
 mod dep_graph_no_deps;
 mod facts;
+mod facts_access_specifiers;
 mod facts_acquires_transitive;
 mod facts_closure;
 mod facts_closure_invoked;

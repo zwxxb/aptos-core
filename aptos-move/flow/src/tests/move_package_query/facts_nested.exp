@@ -36,6 +36,8 @@
           "u64"
         ],
         "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [],
@@ -70,6 +72,8 @@
           "u64"
         ],
         "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [
           "0xcafe::nested::R"
         ],
@@ -116,6 +120,8 @@
           "u64"
         ],
         "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [
           "0xcafe::nested::R"
         ],
@@ -159,6 +165,8 @@
           "u64"
         ],
         "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [],

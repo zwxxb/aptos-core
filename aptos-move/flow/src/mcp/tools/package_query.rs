@@ -419,6 +419,11 @@ struct ResourceAccessFacts {
 ///   callers legitimately absorb the effects, and the inline definition
 ///   also reports its own. Do not double-count.
 /// - When `effectsComplete` is false, all effect fields are lower bounds.
+/// - `readsDeclared`/`writesDeclared` carry Move 2 access-specifier clauses;
+///   declared capabilities are not body effects and do not appear in
+///   `resourceAccess`.
+/// - The model is built in verify mode: `#[verify_only]` functions appear in
+///   facts (their attribute is preserved for filtering).
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct FunctionFacts {
@@ -437,6 +442,10 @@ struct FunctionFacts {
     return_types: Vec<String>,
     /// Resources named in a source-level `acquires` annotation.
     acquires_declared: Vec<String>,
+    /// Resources named in a Move 2 `reads` access-specifier clause.
+    reads_declared: Vec<String>,
+    /// Resources named in a Move 2 `writes` access-specifier clause.
+    writes_declared: Vec<String>,
     acquires_inferred: Vec<String>,
     resource_access: ResourceAccessFacts,
     /// Fully-qualified names of functions for which this body creates closures
@@ -640,24 +649,66 @@ fn lifted_acquires(env: &GlobalEnv, module: &ModuleEnv<'_>) -> BTreeMap<FunId, B
     result
 }
 
-/// Resources listed in the function's source `acquires` annotation (legacy
-/// access specifiers), as fully-qualified names without type arguments,
-/// matching the `acquiresInferred` rendering.
-fn declared_acquires(func: &FunctionEnv<'_>) -> Vec<String> {
+struct DeclaredAccess {
+    acquires: Vec<String>,
+    reads: Vec<String>,
+    writes: Vec<String>,
+}
+
+/// Renders the function's declared access specifiers into three lists by kind.
+/// Address clauses (`reads R(addr)`) are not represented. Wildcards render as
+/// `*`, `0xADDR::*`, or `module::*`; negation prefixes the string with `!`.
+fn declared_access(func: &FunctionEnv<'_>, type_ctx: &TypeDisplayContext<'_>) -> DeclaredAccess {
     let env = func.module_env.env;
-    let mut result = BTreeSet::new();
+    let mut result = DeclaredAccess {
+        acquires: vec![],
+        reads: vec![],
+        writes: vec![],
+    };
     for spec in func.get_access_specifiers().unwrap_or_default() {
-        if spec.kind != AccessSpecifierKind::LegacyAcquires {
-            continue;
-        }
-        if let ResourceSpecifier::Resource(qid) = &spec.resource.1 {
-            result.insert(
-                env.get_struct(qid.to_qualified_id())
-                    .get_full_name_with_address(),
-            );
+        let rendered = match &spec.resource.1 {
+            ResourceSpecifier::Any => "*".to_string(),
+            ResourceSpecifier::DeclaredAtAddress(addr) => {
+                format!("{}::*", env.display(addr))
+            },
+            ResourceSpecifier::DeclaredInModule(mid) => {
+                format!("{}::*", env.get_module(*mid).get_full_name_str())
+            },
+            ResourceSpecifier::Resource(qid) => {
+                let base = env
+                    .get_struct(qid.to_qualified_id())
+                    .get_full_name_with_address();
+                if qid.inst.is_empty() {
+                    base
+                } else {
+                    let args = qid
+                        .inst
+                        .iter()
+                        .map(|t| t.display(type_ctx).to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    format!("{base}<{args}>")
+                }
+            },
+        };
+        let rendered = if spec.negated {
+            format!("!{rendered}")
+        } else {
+            rendered
+        };
+        match &spec.kind {
+            AccessSpecifierKind::LegacyAcquires => result.acquires.push(rendered),
+            AccessSpecifierKind::Reads => result.reads.push(rendered),
+            AccessSpecifierKind::Writes => result.writes.push(rendered),
         }
     }
-    result.into_iter().collect()
+    result.acquires.sort();
+    result.acquires.dedup();
+    result.reads.sort();
+    result.reads.dedup();
+    result.writes.sort();
+    result.writes.dedup();
+    result
 }
 
 fn build_function_facts(
@@ -698,6 +749,8 @@ fn build_function_facts(
         })
         .unwrap_or_default();
 
+    let access = declared_access(func, &type_ctx);
+
     let scan = scan_body(env, func, &type_ctx);
     let resource_access = ResourceAccessFacts {
         reads: scan.reads.into_iter().collect(),
@@ -725,7 +778,9 @@ fn build_function_facts(
         type_params: type_params_to_facts(env, &func.get_type_parameters()),
         params,
         return_types,
-        acquires_declared: declared_acquires(func),
+        acquires_declared: access.acquires,
+        reads_declared: access.reads,
+        writes_declared: access.writes,
         acquires_inferred,
         resource_access,
         creates_closures: scan.creates_closures.into_iter().collect(),

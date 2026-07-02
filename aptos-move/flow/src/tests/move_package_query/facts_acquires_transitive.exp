@@ -29,6 +29,8 @@
         "acquiresDeclared": [
           "0xcafe::acq::R"
         ],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [
           "0xcafe::acq::R"
         ],
@@ -62,6 +64,8 @@
         "acquiresDeclared": [
           "0xcafe::acq::R"
         ],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [
           "0xcafe::acq::R"
         ],
@@ -103,6 +107,8 @@
           "0xcafe::acq::R",
           "0xcafe::acq::S"
         ],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [
           "0xcafe::acq::R",
           "0xcafe::acq::S"
@@ -145,6 +151,8 @@
           "0xcafe::acq::R",
           "0xcafe::acq::S"
         ],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [
           "0xcafe::acq::R",
           "0xcafe::acq::S"
@@ -179,6 +187,8 @@
           "u64"
         ],
         "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [
           "0xcafe::acq::R"
         ],

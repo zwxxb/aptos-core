@@ -32,6 +32,8 @@
           "bool"
         ],
         "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [],

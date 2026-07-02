@@ -36,6 +36,8 @@
           "u64"
         ],
         "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [],
@@ -70,6 +72,8 @@
           "u64"
         ],
         "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [],
@@ -106,6 +110,8 @@
           "u64"
         ],
         "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [],
@@ -144,6 +150,8 @@
           "u64"
         ],
         "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [],
