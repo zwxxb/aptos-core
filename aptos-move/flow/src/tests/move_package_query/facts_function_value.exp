@@ -1,0 +1,81 @@
+{
+  "0xcafe::fv": {
+    "file": "<TEMPDIR>/fv.move",
+    "span": [
+      1,
+      9
+    ],
+    "friends": [],
+    "attributes": [],
+    "functions": [
+      {
+        "name": "foo",
+        "file": "<TEMPDIR>/fv.move",
+        "span": [
+          2,
+          4
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "bar",
+            "type": "|u64|u64"
+          }
+        ],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": true,
+        "effectsComplete": false,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "pure_leaf",
+        "file": "<TEMPDIR>/fv.move",
+        "span": [
+          6,
+          8
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "x",
+            "type": "u64"
+          }
+        ],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      }
+    ],
+    "structs": [],
+    "constants": []
+  }
+}

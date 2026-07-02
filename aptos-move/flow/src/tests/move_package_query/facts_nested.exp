@@ -40,6 +40,9 @@
           "reads": [],
           "writes": []
         },
+        "createsClosures": [],
+        "invokesFunctionValues": true,
+        "effectsComplete": false,
         "isLambdaLifted": false
       },
       {
@@ -70,6 +73,11 @@
           "reads": [],
           "writes": []
         },
+        "createsClosures": [
+          "0xcafe::nested::__lambda__2__outer"
+        ],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": false
       },
       {
@@ -108,6 +116,9 @@
           "reads": [],
           "writes": []
         },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": true,
         "definedIn": "outer"
       },
@@ -143,6 +154,11 @@
           "reads": [],
           "writes": []
         },
+        "createsClosures": [
+          "0xcafe::nested::__lambda__1__outer"
+        ],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": true,
         "definedIn": "outer"
       }

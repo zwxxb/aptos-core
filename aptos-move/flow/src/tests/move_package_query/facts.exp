@@ -54,6 +54,9 @@
           ],
           "writes": []
         },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": false
       },
       {
@@ -98,6 +101,9 @@
             "0xcafe::coin::CoinStore<CoinType>"
           ]
         },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": false
       },
       {
@@ -140,6 +146,9 @@
           ],
           "writes": []
         },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": false
       },
       {
@@ -176,6 +185,9 @@
             "0xcafe::coin::CoinStore<CoinType>"
           ]
         },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": false
       },
       {
@@ -207,6 +219,9 @@
           "reads": [],
           "writes": []
         },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": false
       },
       {
@@ -249,6 +264,9 @@
             "0xcafe::coin::CoinStore<CoinType>"
           ]
         },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": false
       }
     ],
@@ -486,6 +504,9 @@
           "reads": [],
           "writes": []
         },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": false
       },
       {
@@ -514,6 +535,9 @@
           "reads": [],
           "writes": []
         },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": false
       }
     ],

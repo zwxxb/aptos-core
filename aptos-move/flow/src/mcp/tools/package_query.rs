@@ -9,7 +9,7 @@ use super::super::{
 };
 use move_compiler_v2::env_pipeline::lambda_lifter::is_lambda_lifted_fun as is_lambda_lifted;
 use move_model::{
-    ast::{Attribute, AttributeValue, ExpData, Operation, Value},
+    ast::{Attribute, AttributeValue, ExpData, Operation, Value, VisitorPosition},
     model::{
         FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, NamedConstantEnv, QualifiedId, StructEnv,
         TypeParameter, Visibility,
@@ -419,6 +419,18 @@ struct FunctionFacts {
     return_types: Vec<String>,
     acquires_inferred: Vec<String>,
     resource_access: ResourceAccessFacts,
+    /// Fully-qualified names of functions for which this body creates closures
+    /// (`Operation::Closure`). The closure's own effects are on the target
+    /// function's facts; creation alone does not execute them.
+    creates_closures: Vec<String>,
+    /// True if the body invokes a function value whose target is not
+    /// statically known. Such calls can have arbitrary resource effects.
+    invokes_function_values: bool,
+    /// False when `resourceAccess`/`acquiresInferred` are lower bounds: native
+    /// functions, functions without a body, or `invokesFunctionValues`.
+    /// Effects of named callees are intentionally not folded in — compose
+    /// with the `call_graph` query.
+    effects_complete: bool,
     /// True for lambda-lifted functions.
     is_lambda_lifted: bool,
     /// For a lambda-lifted function, the user function whose source defines the lambda.
@@ -574,7 +586,13 @@ fn build_function_facts(
         })
         .unwrap_or_default();
 
-    let resource_access = build_resource_access(env, func, &type_ctx);
+    let scan = scan_body(env, func, &type_ctx);
+    let resource_access = ResourceAccessFacts {
+        reads: scan.reads.into_iter().collect(),
+        writes: scan.writes.into_iter().collect(),
+    };
+    let effects_complete =
+        !func.is_native() && func.get_def().is_some() && !scan.invokes_function_values;
 
     let attributes = attrs_to_facts(env, func.get_attributes());
 
@@ -597,6 +615,9 @@ fn build_function_facts(
         return_types,
         acquires_inferred,
         resource_access,
+        creates_closures: scan.creates_closures.into_iter().collect(),
+        invokes_function_values: scan.invokes_function_values,
+        effects_complete,
         is_lambda_lifted: is_lifted_closure(func),
         defined_in: defined_in.get(&func.get_qualified_id()).cloned(),
     }
@@ -779,51 +800,93 @@ fn format_return_types(func: &FunctionEnv<'_>, type_ctx: &TypeDisplayContext<'_>
         .map(|t| t.display(type_ctx).to_string())
         .collect()
 }
+/// Direct effects of a function body: storage ops, closure creations, and
+/// unknown function-value invocations. Spec blocks are specification-only and
+/// skipped; lambda bodies (pre-lifting only, defensive) belong to the closure.
+#[derive(Default)]
+struct BodyScan {
+    reads: BTreeSet<String>,
+    writes: BTreeSet<String>,
+    creates_closures: BTreeSet<String>,
+    invokes_function_values: bool,
+}
+
 /// Empty when the function has no AST body.
-fn build_resource_access(
+fn scan_body(
     env: &GlobalEnv,
     func: &FunctionEnv<'_>,
     type_ctx: &TypeDisplayContext<'_>,
-) -> ResourceAccessFacts {
+) -> BodyScan {
+    let mut scan = BodyScan::default();
     let Some(body) = func.get_def() else {
-        return ResourceAccessFacts {
-            reads: vec![],
-            writes: vec![],
-        };
+        return scan;
     };
-    let mut reads = BTreeSet::new();
-    let mut writes = BTreeSet::new();
-    body.visit_pre_order(&mut |e| {
-        if let ExpData::Call(node_id, op, _) = e {
-            let (does_read, does_write) = match op {
-                Operation::Exists(_) | Operation::BorrowGlobal(ReferenceKind::Immutable) => {
-                    (true, false)
-                },
-                Operation::BorrowGlobal(ReferenceKind::Mutable) | Operation::MoveFrom => {
-                    (true, true)
-                },
-                Operation::MoveTo => (false, true),
-                _ => (false, false),
-            };
-            if does_read || does_write {
-                let insts = env.get_node_instantiation(*node_id);
-                if let Some(ty) = insts.first() {
-                    let ty = ty.display(type_ctx).to_string();
-                    if does_read {
-                        reads.insert(ty.clone());
-                    }
-                    if does_write {
-                        writes.insert(ty);
+    let mut spec_depth = 0usize;
+    let mut lambda_depth = 0usize;
+    body.visit_positions(&mut |pos, e| {
+        match e {
+            ExpData::SpecBlock(..) => match pos {
+                VisitorPosition::Pre => spec_depth += 1,
+                VisitorPosition::Post => spec_depth -= 1,
+                _ => {},
+            },
+            ExpData::Lambda(..) => match pos {
+                VisitorPosition::Pre => lambda_depth += 1,
+                VisitorPosition::Post => lambda_depth -= 1,
+                _ => {},
+            },
+            ExpData::Invoke(_, callee, _)
+                if matches!(pos, VisitorPosition::Pre)
+                    && spec_depth == 0
+                    && lambda_depth == 0 =>
+            {
+                // Invoking a closure built in place has a known target whose
+                // facts carry the effects; anything else is unknown.
+                if !matches!(
+                    callee.as_ref(),
+                    ExpData::Call(_, Operation::Closure(..), _)
+                ) {
+                    scan.invokes_function_values = true;
+                }
+            },
+            ExpData::Call(node_id, op, _)
+                if matches!(pos, VisitorPosition::Pre)
+                    && spec_depth == 0
+                    && lambda_depth == 0 =>
+            {
+                if let Operation::Closure(mid, fid, _) = op {
+                    scan.creates_closures.insert(
+                        env.get_function(mid.qualified(*fid))
+                            .get_full_name_with_address(),
+                    );
+                } else {
+                    let (does_read, does_write) = match op {
+                        Operation::Exists(_)
+                        | Operation::BorrowGlobal(ReferenceKind::Immutable) => (true, false),
+                        Operation::BorrowGlobal(ReferenceKind::Mutable)
+                        | Operation::MoveFrom => (true, true),
+                        Operation::MoveTo => (false, true),
+                        _ => (false, false),
+                    };
+                    if does_read || does_write {
+                        let insts = env.get_node_instantiation(*node_id);
+                        if let Some(ty) = insts.first() {
+                            let ty = ty.display(type_ctx).to_string();
+                            if does_read {
+                                scan.reads.insert(ty.clone());
+                            }
+                            if does_write {
+                                scan.writes.insert(ty);
+                            }
+                        }
                     }
                 }
-            }
+            },
+            _ => {},
         }
         true
     });
-    ResourceAccessFacts {
-        reads: reads.into_iter().collect(),
-        writes: writes.into_iter().collect(),
-    }
+    scan
 }
 
 /// Resolve a `Loc` to its source file and 1-indexed `[start_line, end_line]`.

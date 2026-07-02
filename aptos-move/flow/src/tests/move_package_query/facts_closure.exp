@@ -40,6 +40,9 @@
           "reads": [],
           "writes": []
         },
+        "createsClosures": [],
+        "invokesFunctionValues": true,
+        "effectsComplete": false,
         "isLambdaLifted": false
       },
       {
@@ -70,6 +73,9 @@
           "reads": [],
           "writes": []
         },
+        "createsClosures": [],
+        "invokesFunctionValues": true,
+        "effectsComplete": false,
         "isLambdaLifted": false
       },
       {
@@ -97,6 +103,11 @@
           "reads": [],
           "writes": []
         },
+        "createsClosures": [
+          "0xcafe::closures::__lambda__1__setup"
+        ],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": false
       },
       {
@@ -127,6 +138,11 @@
           "reads": [],
           "writes": []
         },
+        "createsClosures": [
+          "0xcafe::closures::__lambda__1__with_capture"
+        ],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": false
       },
       {
@@ -154,6 +170,9 @@
           ],
           "writes": []
         },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": true,
         "definedIn": "setup"
       },
@@ -189,6 +208,9 @@
           "reads": [],
           "writes": []
         },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": true,
         "definedIn": "with_capture"
       }
