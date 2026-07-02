@@ -25,14 +25,7 @@ use rmcp::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 
-/// Returns true only for compiler-synthesized lambda-lifted functions.
-///
-/// The compiler's `is_lambda_lifted_fun` uses a substring heuristic
-/// (`name.contains("__lambda__")`), which mistags user functions whose names
-/// merely contain the marker string (e.g. `run__lambda__step`). We additionally
-/// require the generated shape `__lambda__<digits><suffix>__<host>` produced by
-/// `gen_closure_function_name` in `lambda_lifter.rs`, where the suffix is empty
-/// for regular lifting and e.g. `_inline_..` for inliner-lifted lambdas.
+/// Avoids tagging user functions that merely contain the lambda marker.
 fn is_lifted_closure(func: &FunctionEnv<'_>) -> bool {
     if !is_lambda_lifted(func) {
         return false;
@@ -64,19 +57,13 @@ enum QueryType {
     DepGraph,
     /// Returns a summary of each module's constants, structs, and functions.
     ModuleSummary,
-    /// Returns a function-level call graph as a map from each function to the
-    /// functions it statically calls. Function-value invocations and closure
-    /// creations are not edges; see the facts query's `invokesFunctionValues`
-    /// and `createsClosures` for those.
+    /// Returns a function-level static call graph.
     CallGraph,
     /// Returns direct and transitive calls/uses by a given function.
     /// "called" = direct calls; "used" = direct calls + closure captures.
-    /// `createsClosures` lists functions for which the body creates closures.
-    /// `invokesFunctionValues` is true when the body invokes a function value
-    /// whose target is not statically known; `called`/`used` are lower bounds then.
+    /// Function-value invocations make the static sets lower bounds.
     FunctionUsage,
-    /// Returns per-module facts: functions, structs, constants, friends,
-    /// attributes, and source locations.
+    /// Returns per-module facts.
     Facts,
 }
 
@@ -150,12 +137,7 @@ impl FlowSession {
     }
 }
 
-/// Return an error when the package has compilation errors, since semantic
-/// queries would reflect a partially compiled model and produce misleading
-/// results (e.g. `get_called_functions()` silently returns empty for
-/// error-failed functions, shrinking the graph without any signal).
-/// Structural queries (`dep_graph`, `module_summary`) are not gated because
-/// they do not rely on body-level compiler analysis.
+/// Semantic queries need complete body-level compiler analysis.
 fn ensure_no_compilation_errors(data: &PackageData, query: &str) -> Result<(), rmcp::ErrorData> {
     if data.has_compilation_errors() {
         return Err(mcp_err(format!(
@@ -168,7 +150,7 @@ fn ensure_no_compilation_errors(data: &PackageData, query: &str) -> Result<(), r
 
 // ========== Query: dep_graph ==========
 
-/// Returns an adjacency map: module name → set of modules it depends on.
+/// Returns an adjacency map from module name to dependencies.
 fn build_dep_graph(env: &GlobalEnv) -> BTreeMap<String, BTreeSet<String>> {
     env.get_primary_target_modules()
         .iter()
@@ -185,10 +167,6 @@ fn build_dep_graph(env: &GlobalEnv) -> BTreeMap<String, BTreeSet<String>> {
 }
 
 // ========== Query: module_summary ==========
-
-// Response types for module_summary. Using typed structs rather than plain
-// strings ensures the MCP client receives structured JSON it can access
-// programmatically.
 
 #[derive(Debug, serde::Serialize)]
 struct ModuleSummary {
@@ -221,23 +199,16 @@ struct FunctionSummary {
     is_lambda_lifted: bool,
 }
 
-/// Render a function header: `public entry fun name<T: copy>(a: u64, b: 0xcafe::m::S): u64`.
-///
-/// Unlike `FunctionEnv::get_header_string`, this:
-/// - Separates params with `", "` (not `","`)
-/// - Uses fully-qualified types via `qualified_type_ctx`
-/// - Renders `package` visibility correctly (the raw enum reads `Friend`)
+/// Render a Move function header with fully-qualified types.
 fn function_signature(env: &GlobalEnv, func: &FunctionEnv<'_>) -> String {
     let type_ctx = qualified_type_ctx(func.get_type_display_ctx());
     let symbol_pool = env.symbol_pool();
 
     let mut parts: Vec<String> = Vec::new();
-    // Visibility — omit "internal" (private functions have no keyword)
     let vis = visibility_str(func);
     if vis != "internal" {
         parts.push(vis);
     }
-    // Modifiers: entry and inline are mutually exclusive (FunctionKind)
     if func.is_entry() {
         parts.push("entry".to_string());
     } else if func.is_inline() {
@@ -252,7 +223,6 @@ fn function_signature(env: &GlobalEnv, func: &FunctionEnv<'_>) -> String {
     s.push(' ');
     s.push_str(&func.get_name_str());
 
-    // Type parameters with ability constraints
     let type_params = func.get_type_parameters();
     if !type_params.is_empty() {
         s.push('<');
@@ -273,7 +243,6 @@ fn function_signature(env: &GlobalEnv, func: &FunctionEnv<'_>) -> String {
         s.push('>');
     }
 
-    // Parameters — `, `-separated, fully-qualified types
     s.push('(');
     let params: Vec<String> = func
         .get_parameters_ref()
@@ -283,7 +252,6 @@ fn function_signature(env: &GlobalEnv, func: &FunctionEnv<'_>) -> String {
     s.push_str(&params.join(", "));
     s.push(')');
 
-    // Return type(s)
     let ret = format_return_types(func, &type_ctx);
     match ret.len() {
         0 => {},
@@ -360,7 +328,7 @@ fn build_module_summary(env: &GlobalEnv) -> BTreeMap<String, ModuleSummary> {
 
 // ========== Query: call_graph ==========
 
-/// Returns an adjacency map: function name → set of called function names.
+/// Returns an adjacency map from function name to called functions.
 fn build_call_graph(env: &GlobalEnv) -> BTreeMap<String, BTreeSet<String>> {
     env.get_primary_target_modules()
         .iter()
@@ -389,10 +357,7 @@ struct FunctionUsage {
     called_transitive: BTreeSet<String>,
     used: BTreeSet<String>,
     used_transitive: BTreeSet<String>,
-    /// Functions for which the queried function's body creates closures.
     creates_closures: BTreeSet<String>,
-    /// True if the body invokes a function value whose target is not
-    /// statically known; `called`/`used` are lower bounds then.
     invokes_function_values: bool,
 }
 
@@ -430,8 +395,6 @@ fn qids_to_names(env: &GlobalEnv, qids: &BTreeSet<QualifiedId<FunId>>) -> BTreeS
 }
 
 // ========== Query: facts ==========
-//
-// Per-module facts read from the compiler's GlobalEnv. Wire keys use camelCase.
 
 /// Source file and 1-indexed `[start_line, end_line]` span for an item.
 #[derive(Debug, serde::Serialize)]
@@ -465,10 +428,8 @@ struct FriendFacts {
 #[serde(rename_all = "camelCase")]
 struct AttributeFacts {
     name: String,
-    /// Present for an assignment attribute `#[name = value]`.
     #[serde(skip_serializing_if = "Option::is_none")]
     value: Option<String>,
-    /// Present for a nested attribute `#[name(inner, ...)]`.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     args: Vec<AttributeFacts>,
 }
@@ -502,7 +463,6 @@ struct FieldFacts {
 #[serde(rename_all = "camelCase")]
 struct VariantFacts {
     name: String,
-    /// One of `"unit"`, `"positional"`, `"named"`.
     kind: String,
     fields: Vec<FieldFacts>,
     attributes: Vec<AttributeFacts>,
@@ -515,32 +475,15 @@ struct ResourceAccessFacts {
     writes: Vec<String>,
 }
 
-/// Per-function facts.
-///
-/// Effect-model contract:
-/// - `acquiresInferred` is the compiler-checked value: post-inlining,
-///   pre-lambda-lifting, same-module resources only, no type arguments.
-///   Lambda bodies count toward the enclosing function (language rule).
-///   For lambda-lifted functions it is recomputed with the same rule.
-/// - `resourceAccess` covers this body only, fully qualified with type
-///   arguments; `exists<T>` is a read but never an acquire. Cross-module
-///   resources appear here but never in `acquiresInferred`.
-/// - Inline function bodies are expanded into callers before analysis:
-///   callers legitimately absorb the effects, and the inline definition
-///   also reports its own. Do not double-count.
-/// - When `effectsComplete` is false, all effect fields are lower bounds.
-/// - `readsDeclared`/`writesDeclared` carry Move 2 access-specifier clauses;
-///   declared capabilities are not body effects and do not appear in
-///   `resourceAccess`.
-/// - The model is built in verify mode: `#[verify_only]` functions appear in
-///   facts (their attribute is preserved for filtering).
+/// Per-function facts. Body effects are local to this body; compose with the
+/// call graph for named callees. When `effectsComplete` is false, effect fields
+/// are lower bounds.
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct FunctionFacts {
     name: String,
     #[serde(flatten)]
     location: SourceLocation,
-    /// One of `"public"`, `"friend"`, `"package"`, `"internal"`.
     visibility: String,
     is_entry: bool,
     is_inline: bool,
@@ -550,29 +493,15 @@ struct FunctionFacts {
     type_params: Vec<TypeParamFacts>,
     params: Vec<ParamFacts>,
     return_types: Vec<String>,
-    /// Resources named in a source-level `acquires` annotation.
     acquires_declared: Vec<String>,
-    /// Resources named in a Move 2 `reads` access-specifier clause.
     reads_declared: Vec<String>,
-    /// Resources named in a Move 2 `writes` access-specifier clause.
     writes_declared: Vec<String>,
     acquires_inferred: Vec<String>,
     resource_access: ResourceAccessFacts,
-    /// Fully-qualified names of functions for which this body creates closures
-    /// (`Operation::Closure`). The closure's own effects are on the target
-    /// function's facts; creation alone does not execute them.
     creates_closures: Vec<String>,
-    /// True if the body invokes a function value whose target is not
-    /// statically known. Such calls can have arbitrary resource effects.
     invokes_function_values: bool,
-    /// False when `resourceAccess`/`acquiresInferred` are lower bounds: native
-    /// functions, functions without a body, or `invokesFunctionValues`.
-    /// Effects of named callees are intentionally not folded in — compose
-    /// with the `call_graph` query.
     effects_complete: bool,
-    /// True for lambda-lifted functions.
     is_lambda_lifted: bool,
-    /// For a lambda-lifted function, the user function whose source defines the lambda.
     #[serde(skip_serializing_if = "Option::is_none")]
     defined_in: Option<String>,
 }
@@ -580,7 +509,6 @@ struct FunctionFacts {
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct StructFacts {
-    /// `"struct"` or `"enum"`.
     kind: String,
     name: String,
     #[serde(flatten)]
@@ -594,7 +522,6 @@ struct StructFacts {
     attributes: Vec<AttributeFacts>,
 }
 
-/// Build per-module facts for every primary target module in `env`.
 fn build_facts(env: &GlobalEnv) -> BTreeMap<String, ModuleFacts> {
     env.get_primary_target_modules()
         .iter()
@@ -655,8 +582,7 @@ fn build_constant_summary(env: &GlobalEnv, c: &NamedConstantEnv<'_>) -> Constant
     }
 }
 
-/// Maps each lambda-lifted function to the user function whose source
-/// contains it, chaining through nested closures.
+/// Maps each lambda-lifted function to the user function that defines it.
 fn defining_functions(
     env: &GlobalEnv,
     module: &ModuleEnv<'_>,
@@ -693,11 +619,7 @@ fn defining_functions(
     result
 }
 
-/// The compiler's acquires pass runs before lambda lifting, so lifted
-/// functions carry no acquires info. Recompute it with the same rule:
-/// direct borrow_global/borrow_global_mut/move_from of same-module structs,
-/// joined with same-module static callees, to a fixpoint across the module's
-/// lifted functions (non-lifted callees use their compiler-stored value).
+/// Recompute same-module acquires for lifted functions.
 fn lifted_acquires(env: &GlobalEnv, module: &ModuleEnv<'_>) -> BTreeMap<FunId, BTreeSet<StructId>> {
     let mid = module.get_id();
     let mut result: BTreeMap<FunId, BTreeSet<StructId>> = BTreeMap::new();
@@ -765,9 +687,7 @@ struct DeclaredAccess {
     writes: Vec<String>,
 }
 
-/// Renders the function's declared access specifiers into three lists by kind.
-/// Address clauses (`reads R(addr)`) are not represented. Wildcards render as
-/// `*`, `0xADDR::*`, or `module::*`; negation prefixes the string with `!`.
+/// Renders declared access specifiers into lists by kind.
 fn declared_access(func: &FunctionEnv<'_>, type_ctx: &TypeDisplayContext<'_>) -> DeclaredAccess {
     let env = func.module_env.env;
     let mut result = DeclaredAccess {
@@ -984,8 +904,7 @@ fn attrs_to_facts(env: &GlobalEnv, attrs: &[Attribute]) -> Vec<AttributeFacts> {
     attrs.iter().map(|a| attr_to_facts(env, a)).collect()
 }
 
-/// Serialize a single attribute, preserving its arguments. `#[name(a, b = c)]`
-/// becomes `{ name, args: [...] }`; `#[name = value]` becomes `{ name, value }`.
+/// Serialize a single attribute, preserving nested arguments.
 fn attr_to_facts(env: &GlobalEnv, attr: &Attribute) -> AttributeFacts {
     let symbol_pool = env.symbol_pool();
     match attr {
@@ -1002,8 +921,6 @@ fn attr_to_facts(env: &GlobalEnv, attr: &Attribute) -> AttributeFacts {
     }
 }
 
-/// Render an attribute value: literals via `value_to_move_source`, named
-/// paths as fully-qualified `address::module::name` (or a bare name).
 fn attr_value_to_string(env: &GlobalEnv, val: &AttributeValue) -> String {
     match val {
         AttributeValue::Value(_, v) => value_to_move_source(env, v),
@@ -1017,12 +934,7 @@ fn attr_value_to_string(env: &GlobalEnv, val: &AttributeValue) -> String {
     }
 }
 
-/// Render a Move `Value` as source-shaped syntax. Byte strings become
-/// `x"…"` (always-valid Move literal). Vectors recurse and render as
-/// `vector[…]`. Scalars (numbers, bools, addresses) go through
-/// `env.display`, which is already correct for them. `AddressArray` and
-/// `Tuple` fall back to `env.display` (Rust `Debug`) — leave them until a
-/// real case shows up.
+/// Render Move values as source-shaped literals where the compiler display is rough.
 fn value_to_move_source(env: &GlobalEnv, val: &Value) -> String {
     use std::fmt::Write as _;
     match val {
@@ -1059,7 +971,7 @@ fn visibility_str(func: &FunctionEnv<'_>) -> String {
     .to_string()
 }
 
-/// A type-display context that renders every struct fully-qualified as `address::module::Name<...>`
+/// Render struct types as `address::module::Name<...>`.
 fn qualified_type_ctx(base: TypeDisplayContext<'_>) -> TypeDisplayContext<'_> {
     TypeDisplayContext {
         display_module_addr: true,
@@ -1068,8 +980,6 @@ fn qualified_type_ctx(base: TypeDisplayContext<'_>) -> TypeDisplayContext<'_> {
     }
 }
 
-/// Render a function's return as a list of types: `[]` for no return, one entry
-/// for a scalar, and one entry per element for a tuple (multiple) return.
 fn format_return_types(func: &FunctionEnv<'_>, type_ctx: &TypeDisplayContext<'_>) -> Vec<String> {
     func.get_result_type()
         .flatten()
@@ -1077,9 +987,7 @@ fn format_return_types(func: &FunctionEnv<'_>, type_ctx: &TypeDisplayContext<'_>
         .map(|t| t.display(type_ctx).to_string())
         .collect()
 }
-/// Direct effects of a function body: storage ops, closure creations, and
-/// unknown function-value invocations. Spec blocks are specification-only and
-/// skipped; lambda bodies (pre-lifting only, defensive) belong to the closure.
+/// Direct effects of a function body.
 #[derive(Default)]
 struct BodyScan {
     reads: BTreeSet<String>,
@@ -1088,7 +996,6 @@ struct BodyScan {
     invokes_function_values: bool,
 }
 
-/// Empty when the function has no AST body.
 fn scan_body(
     env: &GlobalEnv,
     func: &FunctionEnv<'_>,
@@ -1115,8 +1022,6 @@ fn scan_body(
             ExpData::Invoke(_, callee, _)
                 if matches!(pos, VisitorPosition::Pre) && spec_depth == 0 && lambda_depth == 0 =>
             {
-                // Invoking a closure built in place has a known target whose
-                // facts carry the effects; anything else is unknown.
                 if !matches!(callee.as_ref(), ExpData::Call(_, Operation::Closure(..), _)) {
                     scan.invokes_function_values = true;
                 }

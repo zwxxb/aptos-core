@@ -33,19 +33,13 @@ pub fn run() -> Result<()> {
     Ok(())
 }
 
-/// Read the package name from `Move.toml` by line scanning: only the exact
-/// `name` key inside the `[package]` section counts, and inline comments are
-/// stripped. Not a full TOML parser — good enough for well-formed manifests.
-///
-/// Note: `split('#')` inside a quoted value containing `#` would incorrectly
-/// trim — acceptable because package names do not contain `#` in practice.
-fn read_package_name(path: &Path) -> Option<String> {
+/// Read the exact `name` key from the `[package]` section.
+pub(crate) fn read_package_name(path: &Path) -> Option<String> {
     let content = std::fs::read_to_string(path).ok()?;
     let mut in_package_section = false;
     for line in content.lines() {
         let trimmed = line.trim();
         if trimmed.starts_with('[') {
-            // Tolerate trailing comments and inner whitespace: `[ package ] # x`.
             let header = trimmed.split('#').next().unwrap_or("").trim();
             in_package_section = header
                 .strip_prefix('[')
@@ -85,86 +79,5 @@ fn find_package_root(start: &Path) -> Option<std::path::PathBuf> {
             Some(parent) => dir = parent,
             None => return None,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::io::Write;
-
-    #[test]
-    fn test_read_package_name() {
-        let dir = tempfile::tempdir().unwrap();
-        let toml = dir.path().join("Move.toml");
-        let mut f = std::fs::File::create(&toml).unwrap();
-        writeln!(f, "[package]").unwrap();
-        writeln!(f, "name = \"my_package\"").unwrap();
-        assert_eq!(read_package_name(&toml), Some("my_package".to_string()));
-    }
-
-    #[test]
-    fn test_read_package_name_single_quotes() {
-        let dir = tempfile::tempdir().unwrap();
-        let toml = dir.path().join("Move.toml");
-        let mut f = std::fs::File::create(&toml).unwrap();
-        writeln!(f, "[package]").unwrap();
-        writeln!(f, "name = 'my_pkg'").unwrap();
-        assert_eq!(read_package_name(&toml), Some("my_pkg".to_string()));
-    }
-
-    #[test]
-    fn test_read_package_name_missing() {
-        let dir = tempfile::tempdir().unwrap();
-        let toml = dir.path().join("Move.toml");
-        std::fs::write(&toml, "[dependencies]\n").unwrap();
-        assert_eq!(read_package_name(&toml), None);
-    }
-
-    #[test]
-    fn test_read_package_name_tolerant_section_header() {
-        // `[ package ] # comment` is valid TOML and must still be recognized.
-        let dir = tempfile::tempdir().unwrap();
-        let toml = dir.path().join("Move.toml");
-        std::fs::write(&toml, "[ package ] # metadata\nname = \"pkg\"\n").unwrap();
-        assert_eq!(read_package_name(&toml), Some("pkg".to_string()));
-    }
-
-    #[test]
-    fn test_read_package_name_ignores_other_sections() {
-        // `namespace` in [addresses] must not be mistaken for the package name.
-        let dir = tempfile::tempdir().unwrap();
-        let toml = dir.path().join("Move.toml");
-        std::fs::write(
-            &toml,
-            "[addresses]\nnamespace = \"wrong\"\n[package]\nname = \"right\"\n",
-        )
-        .unwrap();
-        assert_eq!(read_package_name(&toml), Some("right".to_string()));
-    }
-
-    #[test]
-    fn test_read_package_name_strips_inline_comment() {
-        let dir = tempfile::tempdir().unwrap();
-        let toml = dir.path().join("Move.toml");
-        std::fs::write(&toml, "[package]\nname = \"pkg\"  # legacy\n").unwrap();
-        assert_eq!(read_package_name(&toml), Some("pkg".to_string()));
-    }
-
-    #[test]
-    fn test_read_package_name_no_package_section() {
-        let dir = tempfile::tempdir().unwrap();
-        let toml = dir.path().join("Move.toml");
-        std::fs::write(&toml, "[dependencies]\nsome_dep = {}\n").unwrap();
-        assert_eq!(read_package_name(&toml), None);
-    }
-
-    #[test]
-    fn test_read_package_name_names_key_not_matched() {
-        // `names = "x"` is not the `name` key — must not match.
-        let dir = tempfile::tempdir().unwrap();
-        let toml = dir.path().join("Move.toml");
-        std::fs::write(&toml, "[package]\nnames = \"x\"\n").unwrap();
-        assert_eq!(read_package_name(&toml), None);
     }
 }

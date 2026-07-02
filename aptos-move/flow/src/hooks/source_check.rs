@@ -11,17 +11,17 @@
 //!
 //! ## Checks performed
 //!
-//! 1. **Parse check** — runs the Move parser and reports syntax errors.
+//! 1. **Parse check** - runs the Move parser and reports syntax errors.
 //! 2. **AST checks** (only when parsing succeeds):
 //!    - `old()` called outside `ensures`, update invariants, or loop invariants.
 //!    - `old(expr)` in loop invariants where `expr` is not a simple parameter name.
 //!    - Dereference (`*e`) inside spec expressions.
 //!    - Borrow (`&e`) inside spec expressions.
-//! 3. **Text checks** (always run) — flags deprecated Move 1 syntax:
+//! 3. **Text checks** (always run) - flags deprecated Move 1 syntax:
 //!    - `borrow_global<` (use `&T[addr]`).
 //!    - `borrow_global_mut<` (use `&mut T[addr]`).
 //!    - `acquires` annotations (no longer needed).
-//! 4. **Auto-format** — when no errors are found, runs `movefmt` in-place
+//! 4. **Auto-format** - when no errors are found, runs `movefmt` in-place
 //!    (silently skipped if `movefmt` is not installed).
 
 use anyhow::Result;
@@ -46,9 +46,6 @@ use move_symbol_pool::Symbol;
 use serde::Deserialize;
 use std::{collections::HashMap, path::PathBuf, process::Command};
 
-/// Language version used for hook-side parse checks. Keep in sync with the
-/// most recent `LanguageVersion` variant so new syntax is not flagged as a
-/// parse error. (No `latest()` or `Default` exists on the legacy enum.)
 const HOOK_LANGUAGE_VERSION: LanguageVersion = LanguageVersion::V2_5;
 
 /// JSON shape of the PostToolUse hook input (only the fields we need).
@@ -134,13 +131,11 @@ pub(crate) fn check(path: &str, source: &str) -> CheckResult {
 
     let mut all_diags = parse_diags;
 
-    // AST checks only if parse succeeded
     if let Some(defs) = &definitions {
         let ast_diags = ast_checks(defs, file_hash);
         all_diags.extend(ast_diags);
     }
 
-    // Text checks always run
     let text_diags = text_checks(source, file_hash);
     all_diags.extend(text_diags);
 
@@ -175,7 +170,6 @@ fn parse_check(
 
     match parse_file_string(&mut env, file_hash, source) {
         Ok((defs, _comments)) => {
-            // Collect any warnings the parser emitted (e.g. unknown attributes)
             let mut diags = Diagnostics::new();
             if let Err(env_diags) = env.check_diags_at_or_above_severity(
                 legacy_move_compiler::diagnostics::codes::Severity::Warning,
@@ -185,7 +179,6 @@ fn parse_check(
             (Some(defs), diags, false)
         },
         Err(parse_diags) => {
-            // Also include any env diagnostics accumulated before the error
             let mut diags = parse_diags;
             if let Err(env_diags) = env.check_diags_at_or_above_severity(
                 legacy_move_compiler::diagnostics::codes::Severity::Warning,
@@ -197,7 +190,7 @@ fn parse_check(
     }
 }
 
-// ─── AST checks ──────────────────────────────────────────────────────────────
+// AST checks
 
 /// Context for tracking which spec condition we are inside.
 enum SpecContext {
@@ -248,7 +241,6 @@ fn walk_function_body(body: &FunctionBody_, diags: &mut Diagnostics) {
 }
 
 fn walk_sequence_for_spec_blocks(seq: &Sequence, diags: &mut Diagnostics) {
-    // Walk sequence items
     for item in &seq.1 {
         match &item.value {
             SequenceItem_::Seq(exp) => walk_exp_for_spec_blocks(exp, diags),
@@ -256,7 +248,6 @@ fn walk_sequence_for_spec_blocks(seq: &Sequence, diags: &mut Diagnostics) {
             SequenceItem_::Declare(_, _) => {},
         }
     }
-    // Walk trailing expression
     if let Some(exp) = seq.3.as_ref() {
         walk_exp_for_spec_blocks(exp, diags);
     }
@@ -317,35 +308,29 @@ fn walk_exp_for_spec_blocks(exp: &Exp, diags: &mut Diagnostics) {
                 walk_exp_for_spec_blocks(&arm.value.2, diags);
             }
         },
-        // Struct literals: recurse into each field expression.
         Exp_::Pack(_, _, fields) => {
             for (_, e) in fields {
                 walk_exp_for_spec_blocks(e, diags);
             }
         },
-        // Vector literals: recurse into each element expression.
         Exp_::Vector(_, _, args) => {
             for e in &args.value {
                 walk_exp_for_spec_blocks(e, diags);
             }
         },
-        // Higher-order call: recurse into callee and each argument.
         Exp_::ExpCall(func, args) => {
             walk_exp_for_spec_blocks(func, diags);
             for e in &args.value {
                 walk_exp_for_spec_blocks(e, diags);
             }
         },
-        // Type-test expression `e is T1 | ..`: recurse into operand.
         Exp_::Test(e, _) => walk_exp_for_spec_blocks(e, diags),
-        // Spec-only behavior predicates: recurse into target and args.
         Exp_::Behavior(_, target, args) => {
             walk_exp_for_spec_blocks(target, diags);
             for e in &args.value {
                 walk_exp_for_spec_blocks(e, diags);
             }
         },
-        // State-labeled spec expression: recurse into inner expression.
         Exp_::StateLabeled(_, inner, _) => walk_exp_for_spec_blocks(inner, diags),
         _ => {},
     }
@@ -448,11 +433,8 @@ fn walk_spec_exp(exp: &Exp, ctx: &SpecContext, diags: &mut Diagnostics) {
     match &exp.value {
         Exp_::Call(name, _, _, args) if is_old(name) => {
             match ctx {
-                SpecContext::Ensures | SpecContext::InvariantUpdate => {
-                    // OK — old() allowed here
-                },
+                SpecContext::Ensures | SpecContext::InvariantUpdate => {},
                 SpecContext::LoopInvariant => {
-                    // In loop invariants, old() only allowed with simple name args
                     for arg in &args.value {
                         if !is_simple_name(arg) {
                             diags.add(Diagnostic::new(
@@ -482,7 +464,6 @@ fn walk_spec_exp(exp: &Exp, ctx: &SpecContext, diags: &mut Diagnostics) {
                     ));
                 },
             }
-            // Recurse into args
             for arg in &args.value {
                 walk_spec_exp(arg, ctx, diags);
             }
@@ -508,7 +489,6 @@ fn walk_spec_exp(exp: &Exp, ctx: &SpecContext, diags: &mut Diagnostics) {
             ));
             walk_spec_exp(inner, ctx, diags);
         },
-        // Recurse into sub-expressions
         Exp_::Call(_, _, _, args) => {
             for arg in &args.value {
                 walk_spec_exp(arg, ctx, diags);
@@ -559,19 +539,16 @@ fn walk_spec_exp(exp: &Exp, ctx: &SpecContext, diags: &mut Diagnostics) {
             walk_spec_exp(l, ctx, diags);
             walk_spec_exp(r, ctx, diags);
         },
-        // Struct literals: recurse into each field expression.
         Exp_::Pack(_, _, fields) => {
             for (_, e) in fields {
                 walk_spec_exp(e, ctx, diags);
             }
         },
-        // Vector literals: recurse into each element expression.
         Exp_::Vector(_, _, args) => {
             for e in &args.value {
                 walk_spec_exp(e, ctx, diags);
             }
         },
-        // Match expressions: recurse into scrutinee, guards, and arm bodies.
         Exp_::Match(e, arms) => {
             walk_spec_exp(e, ctx, diags);
             for arm in arms {
@@ -581,32 +558,27 @@ fn walk_spec_exp(exp: &Exp, ctx: &SpecContext, diags: &mut Diagnostics) {
                 walk_spec_exp(&arm.value.2, ctx, diags);
             }
         },
-        // Higher-order call: recurse into callee and each argument.
         Exp_::ExpCall(func, args) => {
             walk_spec_exp(func, ctx, diags);
             for e in &args.value {
                 walk_spec_exp(e, ctx, diags);
             }
         },
-        // Type-test expression `e is T1 | ..`: recurse into operand.
         Exp_::Test(e, _) => walk_spec_exp(e, ctx, diags),
-        // Spec-only behavior predicates: recurse into target and args.
         Exp_::Behavior(_, target, args) => {
             walk_spec_exp(target, ctx, diags);
             for e in &args.value {
                 walk_spec_exp(e, ctx, diags);
             }
         },
-        // State-labeled spec expression: recurse into inner expression.
         Exp_::StateLabeled(_, inner, _) => walk_spec_exp(inner, ctx, diags),
-        // Leaf nodes: Name, Value, Unit, Move, Copy, etc.
         _ => {},
     }
 }
 
-// ─── Formatting ──────────────────────────────────────────────────────────────
+// Formatting
 
-/// Locate the movefmt binary: $MOVEFMT_EXE → ~/.local/bin/movefmt → PATH.
+/// Locate the movefmt binary.
 pub(crate) fn find_movefmt() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("MOVEFMT_EXE") {
         return Some(PathBuf::from(p));
@@ -655,7 +627,7 @@ pub(crate) fn format_file(path: &str) {
     }
 }
 
-// ─── Text checks ─────────────────────────────────────────────────────────────
+// Text checks
 
 /// Deprecated Move 1 patterns to flag.
 const DEPRECATED_PATTERNS: &[(&str, &str)] = &[
@@ -748,12 +720,7 @@ fn ignored_context_mask(source: &str) -> Vec<bool> {
     ignored
 }
 
-/// Return `true` when the match at `start` is a bare (unqualified, non-receiver)
-/// use of a storage builtin.
-///
-/// The storage builtins only appear as bare calls; a match preceded by an
-/// identifier character, `.` (receiver call), or `:` (qualified path) is a
-/// user-defined name.
+/// Excludes qualified, receiver, and user-defined names.
 fn is_bare_builtin_use(source: &str, start: usize) -> bool {
     if start == 0 {
         return true;
@@ -773,9 +740,6 @@ fn text_checks(source: &str, file_hash: FileHash) -> Diagnostics {
                 continue;
             }
 
-            // For `borrow_global<` / `borrow_global_mut<`: skip matches where
-            // the preceding byte is an identifier character, `.`, or `:` —
-            // those are user-defined names, not the builtin.
             if pattern == "borrow_global<" || pattern == "borrow_global_mut<" {
                 if !is_bare_builtin_use(source, start) {
                     continue;
