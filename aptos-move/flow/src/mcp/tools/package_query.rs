@@ -15,9 +15,9 @@ use move_model::{
     },
     model::{
         FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, NamedConstantEnv, QualifiedId, StructEnv,
-        TypeParameter, Visibility,
+        StructId, TypeParameter, Visibility,
     },
-    ty::{ReferenceKind, TypeDisplayContext},
+    ty::{ReferenceKind, Type, TypeDisplayContext},
 };
 use rmcp::{
     handler::server::wrapper::Parameters, model::CallToolResult, schemars, tool, tool_router,
@@ -486,9 +486,10 @@ fn build_module_facts(env: &GlobalEnv, module: &ModuleEnv<'_>) -> ModuleFacts {
     let attributes = attrs_to_facts(env, module.get_attributes());
 
     let defined_in = defining_functions(env, module);
+    let lifted_acq = lifted_acquires(env, module);
     let functions: Vec<FunctionFacts> = module
         .get_functions()
-        .map(|f| build_function_facts(env, &f, &defined_in))
+        .map(|f| build_function_facts(env, &f, &defined_in, &lifted_acq))
         .collect();
 
     let structs: Vec<StructFacts> = module
@@ -558,6 +559,77 @@ fn defining_functions(
     result
 }
 
+/// The compiler's acquires pass runs before lambda lifting, so lifted
+/// functions carry no acquires info. Recompute it with the same rule:
+/// direct borrow_global/borrow_global_mut/move_from of same-module structs,
+/// joined with same-module static callees, to a fixpoint across the module's
+/// lifted functions (non-lifted callees use their compiler-stored value).
+fn lifted_acquires(
+    env: &GlobalEnv,
+    module: &ModuleEnv<'_>,
+) -> BTreeMap<FunId, BTreeSet<StructId>> {
+    let mid = module.get_id();
+    let mut result: BTreeMap<FunId, BTreeSet<StructId>> = BTreeMap::new();
+    let mut callees: BTreeMap<FunId, BTreeSet<FunId>> = BTreeMap::new();
+    for f in module.get_functions() {
+        if !is_lifted_closure(&f) {
+            continue;
+        }
+        let mut direct = BTreeSet::new();
+        let mut calls = BTreeSet::new();
+        if let Some(body) = f.get_def() {
+            body.visit_pre_order(&mut |e| {
+                if let ExpData::Call(node_id, op, _) = e {
+                    match op {
+                        Operation::MoveFrom | Operation::BorrowGlobal(..) => {
+                            if let Some(Type::Struct(s_mid, sid, _)) =
+                                env.get_node_instantiation(*node_id).first()
+                            {
+                                if *s_mid == mid {
+                                    direct.insert(*sid);
+                                }
+                            }
+                        },
+                        Operation::MoveFunction(c_mid, c_fid) if *c_mid == mid => {
+                            calls.insert(*c_fid);
+                        },
+                        _ => {},
+                    }
+                }
+                true
+            });
+        }
+        result.insert(f.get_id(), direct);
+        callees.insert(f.get_id(), calls);
+    }
+    loop {
+        let mut changed = false;
+        for (fid, calls) in &callees {
+            let mut acc = result[fid].clone();
+            for callee in calls {
+                match result.get(callee) {
+                    Some(lifted) => acc.extend(lifted.iter().copied()),
+                    None => {
+                        if let Some(stored) =
+                            module.get_function(*callee).get_acquired_structs()
+                        {
+                            acc.extend(stored.iter().copied());
+                        }
+                    },
+                }
+            }
+            if acc.len() != result[fid].len() {
+                result.insert(*fid, acc);
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    result
+}
+
 /// Resources listed in the function's source `acquires` annotation (legacy
 /// access specifiers), as fully-qualified names without type arguments,
 /// matching the `acquiresInferred` rendering.
@@ -582,6 +654,7 @@ fn build_function_facts(
     env: &GlobalEnv,
     func: &FunctionEnv<'_>,
     defined_in: &BTreeMap<QualifiedId<FunId>, String>,
+    lifted_acq: &BTreeMap<FunId, BTreeSet<StructId>>,
 ) -> FunctionFacts {
     let location = loc_to_file_span(env, &func.get_loc());
     let type_ctx = qualified_type_ctx(func.get_type_display_ctx());
@@ -598,8 +671,12 @@ fn build_function_facts(
 
     let return_types = format_return_types(func, &type_ctx);
 
-    let acquires_inferred: Vec<String> = func
-        .get_acquired_structs()
+    let acquired: Option<BTreeSet<StructId>> = if is_lifted_closure(func) {
+        lifted_acq.get(&func.get_id()).cloned()
+    } else {
+        func.get_acquired_structs().cloned()
+    };
+    let acquires_inferred: Vec<String> = acquired
         .map(|set| {
             set.iter()
                 .map(|sid| {

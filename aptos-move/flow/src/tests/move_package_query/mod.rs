@@ -8,6 +8,8 @@ mod dep_graph;
 mod dep_graph_no_deps;
 mod facts;
 mod facts_closure;
+mod facts_closure_stored;
+mod facts_lifted_acquires;
 mod facts_acquires_transitive;
 mod facts_compile_error;
 mod facts_function_value;

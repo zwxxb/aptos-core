@@ -1,16 +1,16 @@
 {
-  "0xcafe::closures": {
-    "file": "<TEMPDIR>/closures.move",
+  "0xcafe::stored": {
+    "file": "<TEMPDIR>/stored.move",
     "span": [
       1,
-      14
+      19
     ],
     "friends": [],
     "attributes": [],
     "functions": [
       {
         "name": "apply",
-        "file": "<TEMPDIR>/closures.move",
+        "file": "<TEMPDIR>/stored.move",
         "span": [
           4,
           4
@@ -47,13 +47,13 @@
         "isLambdaLifted": false
       },
       {
-        "name": "run",
-        "file": "<TEMPDIR>/closures.move",
+        "name": "lifted_calls_helper",
+        "file": "<TEMPDIR>/stored.move",
         "span": [
-          5,
-          5
+          12,
+          14
         ],
-        "visibility": "internal",
+        "visibility": "public",
         "isEntry": false,
         "isInline": false,
         "isNative": false,
@@ -62,32 +62,36 @@
         "typeParams": [],
         "params": [
           {
-            "name": "f",
-            "type": "||u64"
+            "name": "x",
+            "type": "u64"
           }
         ],
         "returnTypes": [
           "u64"
         ],
         "acquiresDeclared": [],
-        "acquiresInferred": [],
+        "acquiresInferred": [
+          "0xcafe::stored::Config"
+        ],
         "resourceAccess": {
           "reads": [],
           "writes": []
         },
-        "createsClosures": [],
-        "invokesFunctionValues": true,
-        "effectsComplete": false,
+        "createsClosures": [
+          "0xcafe::stored::__lambda__1__lifted_calls_helper"
+        ],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
         "isLambdaLifted": false
       },
       {
-        "name": "setup",
-        "file": "<TEMPDIR>/closures.move",
+        "name": "read_config",
+        "file": "<TEMPDIR>/stored.move",
         "span": [
-          11,
-          13
+          16,
+          18
         ],
-        "visibility": "public",
+        "visibility": "internal",
         "isEntry": false,
         "isInline": false,
         "isNative": false,
@@ -100,22 +104,22 @@
         ],
         "acquiresDeclared": [],
         "acquiresInferred": [
-          "0xcafe::closures::Config"
+          "0xcafe::stored::Config"
         ],
         "resourceAccess": {
-          "reads": [],
+          "reads": [
+            "0xcafe::stored::Config"
+          ],
           "writes": []
         },
-        "createsClosures": [
-          "0xcafe::closures::__lambda__1__setup"
-        ],
+        "createsClosures": [],
         "invokesFunctionValues": false,
         "effectsComplete": true,
         "isLambdaLifted": false
       },
       {
-        "name": "with_capture",
-        "file": "<TEMPDIR>/closures.move",
+        "name": "setup",
+        "file": "<TEMPDIR>/stored.move",
         "span": [
           7,
           9
@@ -129,7 +133,7 @@
         "typeParams": [],
         "params": [
           {
-            "name": "c",
+            "name": "x",
             "type": "u64"
           }
         ],
@@ -137,24 +141,26 @@
           "u64"
         ],
         "acquiresDeclared": [],
-        "acquiresInferred": [],
+        "acquiresInferred": [
+          "0xcafe::stored::Config"
+        ],
         "resourceAccess": {
           "reads": [],
           "writes": []
         },
         "createsClosures": [
-          "0xcafe::closures::__lambda__1__with_capture"
+          "0xcafe::stored::__lambda__1__setup"
         ],
         "invokesFunctionValues": false,
         "effectsComplete": true,
         "isLambdaLifted": false
       },
       {
-        "name": "__lambda__1__setup",
-        "file": "<TEMPDIR>/closures.move",
+        "name": "__lambda__1__lifted_calls_helper",
+        "file": "<TEMPDIR>/stored.move",
         "span": [
-          12,
-          12
+          13,
+          13
         ],
         "visibility": "internal",
         "isEntry": false,
@@ -163,29 +169,32 @@
         "isView": false,
         "attributes": [],
         "typeParams": [],
-        "params": [],
+        "params": [
+          {
+            "name": "v",
+            "type": "u64"
+          }
+        ],
         "returnTypes": [
           "u64"
         ],
         "acquiresDeclared": [],
         "acquiresInferred": [
-          "0xcafe::closures::Config"
+          "0xcafe::stored::Config"
         ],
         "resourceAccess": {
-          "reads": [
-            "0xcafe::closures::Config"
-          ],
+          "reads": [],
           "writes": []
         },
         "createsClosures": [],
         "invokesFunctionValues": false,
         "effectsComplete": true,
         "isLambdaLifted": true,
-        "definedIn": "setup"
+        "definedIn": "lifted_calls_helper"
       },
       {
-        "name": "__lambda__1__with_capture",
-        "file": "<TEMPDIR>/closures.move",
+        "name": "__lambda__1__setup",
+        "file": "<TEMPDIR>/stored.move",
         "span": [
           8,
           8
@@ -199,11 +208,7 @@
         "typeParams": [],
         "params": [
           {
-            "name": "c",
-            "type": "u64"
-          },
-          {
-            "name": "y",
+            "name": "v",
             "type": "u64"
           }
         ],
@@ -211,23 +216,27 @@
           "u64"
         ],
         "acquiresDeclared": [],
-        "acquiresInferred": [],
+        "acquiresInferred": [
+          "0xcafe::stored::Config"
+        ],
         "resourceAccess": {
-          "reads": [],
+          "reads": [
+            "0xcafe::stored::Config"
+          ],
           "writes": []
         },
         "createsClosures": [],
         "invokesFunctionValues": false,
         "effectsComplete": true,
         "isLambdaLifted": true,
-        "definedIn": "with_capture"
+        "definedIn": "setup"
       }
     ],
     "structs": [
       {
         "kind": "struct",
         "name": "Config",
-        "file": "<TEMPDIR>/closures.move",
+        "file": "<TEMPDIR>/stored.move",
         "span": [
           2,
           2
