@@ -1,8 +1,8 @@
 // Copyright (c) Aptos Foundation
 // Licensed pursuant to the Innovation-Enabling Source Code License, available at https://github.com/aptos-labs/aptos-core/blob/main/LICENSE
 
-use aptos_package_builder::PackageBuilder;
 use crate::tests::common;
+use aptos_package_builder::PackageBuilder;
 
 /// Two modules share the short name `dup` at different addresses.
 /// A 2-part `dup::f` query must error with an ambiguity message instead of
@@ -15,7 +15,9 @@ async fn move_package_query_function_usage_ambiguous_module() {
     builder.add_alias("b", "0xb");
     builder.add_source("dup_a", "module a::dup { public fun f(): u64 { 1 } }");
     builder.add_source("dup_b", "module b::dup { public fun f(): u64 { 2 } }");
-    let pkg = builder.write_to_temp().expect("failed to create temp package");
+    let pkg = builder
+        .write_to_temp()
+        .expect("failed to create temp package");
     let dir = pkg.path().to_str().unwrap();
     let client = common::make_client().await;
 

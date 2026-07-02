@@ -46,6 +46,11 @@ use move_symbol_pool::Symbol;
 use serde::Deserialize;
 use std::{collections::HashMap, path::PathBuf, process::Command};
 
+/// Language version used for hook-side parse checks. Keep in sync with the
+/// most recent `LanguageVersion` variant so new syntax is not flagged as a
+/// parse error. (No `latest()` or `Default` exists on the legacy enum.)
+const HOOK_LANGUAGE_VERSION: LanguageVersion = LanguageVersion::V2_5;
+
 /// JSON shape of the PostToolUse hook input (only the fields we need).
 #[derive(Deserialize)]
 struct HookInput {
@@ -165,7 +170,7 @@ fn parse_check(
     file_hash: FileHash,
 ) -> (Option<Vec<Definition>>, Diagnostics, bool) {
     let known_attributes = aptos_framework::extended_checks::get_all_attribute_names().clone();
-    let flags = Flags::empty().set_language_version(LanguageVersion::V2_5);
+    let flags = Flags::empty().set_language_version(HOOK_LANGUAGE_VERSION);
     let mut env = CompilationEnv::new(flags, known_attributes);
 
     match parse_file_string(&mut env, file_hash, source) {

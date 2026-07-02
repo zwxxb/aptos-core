@@ -156,10 +156,7 @@ impl FlowSession {
 /// error-failed functions, shrinking the graph without any signal).
 /// Structural queries (`dep_graph`, `module_summary`) are not gated because
 /// they do not rely on body-level compiler analysis.
-fn ensure_no_compilation_errors(
-    data: &PackageData,
-    query: &str,
-) -> Result<(), rmcp::ErrorData> {
+fn ensure_no_compilation_errors(data: &PackageData, query: &str) -> Result<(), rmcp::ErrorData> {
     if data.has_compilation_errors() {
         return Err(mcp_err(format!(
             "package has compilation errors; {query} would reflect a partially \
@@ -224,6 +221,84 @@ struct FunctionSummary {
     is_lambda_lifted: bool,
 }
 
+/// Render a function header: `public entry fun name<T: copy>(a: u64, b: 0xcafe::m::S): u64`.
+///
+/// Unlike `FunctionEnv::get_header_string`, this:
+/// - Separates params with `", "` (not `","`)
+/// - Uses fully-qualified types via `qualified_type_ctx`
+/// - Renders `package` visibility correctly (the raw enum reads `Friend`)
+fn function_signature(env: &GlobalEnv, func: &FunctionEnv<'_>) -> String {
+    let type_ctx = qualified_type_ctx(func.get_type_display_ctx());
+    let symbol_pool = env.symbol_pool();
+    let mut s = String::new();
+
+    // Visibility — omit "internal" (private functions have no keyword)
+    let vis = visibility_str(func);
+    if vis != "internal" {
+        s.push_str(&vis);
+    }
+
+    // Modifiers: entry and inline are mutually exclusive (FunctionKind)
+    if func.is_entry() {
+        s.push_str(" entry");
+    } else if func.is_inline() {
+        s.push_str(" inline");
+    }
+    if func.is_native() {
+        s.push_str(" native");
+    }
+    s.push_str(" fun ");
+    s.push_str(&func.get_name_str());
+
+    // Type parameters with ability constraints
+    let type_params = func.get_type_parameters();
+    if !type_params.is_empty() {
+        s.push('<');
+        let tp_strs: Vec<String> = type_params
+            .iter()
+            .map(|tp| {
+                let name = tp.0.display(symbol_pool).to_string();
+                let abilities: Vec<String> =
+                    tp.1.abilities.into_iter().map(|a| a.to_string()).collect();
+                if abilities.is_empty() {
+                    name
+                } else {
+                    format!("{}: {}", name, abilities.join(" + "))
+                }
+            })
+            .collect();
+        s.push_str(&tp_strs.join(", "));
+        s.push('>');
+    }
+
+    // Parameters — `, `-separated, fully-qualified types
+    s.push('(');
+    let params: Vec<String> = func
+        .get_parameters_ref()
+        .iter()
+        .map(|p| format!("{}: {}", p.0.display(symbol_pool), p.1.display(&type_ctx)))
+        .collect();
+    s.push_str(&params.join(", "));
+    s.push(')');
+
+    // Return type(s)
+    let ret = format_return_types(func, &type_ctx);
+    match ret.len() {
+        0 => {},
+        1 => {
+            s.push_str(": ");
+            s.push_str(&ret[0]);
+        },
+        _ => {
+            s.push_str(": (");
+            s.push_str(&ret.join(", "));
+            s.push(')');
+        },
+    }
+
+    s
+}
+
 /// Build a summary of each target module's constants, structs, and functions.
 fn build_module_summary(env: &GlobalEnv) -> BTreeMap<String, ModuleSummary> {
     env.get_primary_target_modules()
@@ -267,7 +342,7 @@ fn build_module_summary(env: &GlobalEnv) -> BTreeMap<String, ModuleSummary> {
                 .get_functions()
                 .map(|f| FunctionSummary {
                     name: f.get_name_str(),
-                    signature: f.get_header_string(),
+                    signature: function_signature(env, &f),
                     is_lambda_lifted: is_lifted_closure(&f),
                 })
                 .collect();
@@ -659,7 +734,7 @@ fn lifted_acquires(env: &GlobalEnv, module: &ModuleEnv<'_>) -> BTreeMap<FunId, B
     loop {
         let mut changed = false;
         for (fid, calls) in &callees {
-            let mut acc = result[fid].clone();
+            let mut acc = result.get(fid).cloned().unwrap_or_default();
             for callee in calls {
                 match result.get(callee) {
                     Some(lifted) => acc.extend(lifted.iter().copied()),
@@ -670,7 +745,7 @@ fn lifted_acquires(env: &GlobalEnv, module: &ModuleEnv<'_>) -> BTreeMap<FunId, B
                     },
                 }
             }
-            if acc.len() != result[fid].len() {
+            if acc.len() != result.get(fid).map_or(0, BTreeSet::len) {
                 result.insert(*fid, acc);
                 changed = true;
             }
@@ -794,10 +869,9 @@ fn build_function_facts(
 
     let attributes = attrs_to_facts(env, func.get_attributes());
 
-    let is_view = func
-        .get_attributes()
-        .iter()
-        .any(|a| matches!(a, Attribute::Apply(..)) && symbol_pool.string(a.name()).as_str() == "view");
+    let is_view = func.get_attributes().iter().any(|a| {
+        matches!(a, Attribute::Apply(..)) && symbol_pool.string(a.name()).as_str() == "view"
+    });
 
     FunctionFacts {
         name: func.get_name_str(),
