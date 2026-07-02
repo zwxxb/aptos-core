@@ -1,0 +1,83 @@
+{
+  "0xcafe::nat": {
+    "file": "<TEMPDIR>/nat.move",
+    "span": [
+      1,
+      7
+    ],
+    "friends": [],
+    "attributes": [],
+    "functions": [
+      {
+        "name": "ffi",
+        "file": "<TEMPDIR>/nat.move",
+        "span": [
+          2,
+          2
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": true,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "x",
+            "type": "u64"
+          }
+        ],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": false,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "wrapper",
+        "file": "<TEMPDIR>/nat.move",
+        "span": [
+          4,
+          6
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "x",
+            "type": "u64"
+          }
+        ],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      }
+    ],
+    "structs": [],
+    "constants": []
+  }
+}

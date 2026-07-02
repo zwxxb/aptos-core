@@ -5,15 +5,19 @@ use crate::tests::common;
 
 /// Facts for nested closures: verifies `definedIn` resolves through a chain of
 /// lambda-lifted functions to the outermost user function, not just one hop.
+/// The innermost lambda's storage read (`borrow_global<R>`) must be attributed
+/// to the innermost lifted function only, not to the outer function directly.
 #[tokio::test]
 async fn move_package_query_facts_nested() {
     let pkg = common::make_package("facts_nested", &[(
         "nested",
         "module 0xCAFE::nested {
+    struct R has key { v: u64 }
+
     fun apply(f: |u64|u64, x: u64): u64 { f(x) }
 
     public fun outer(c: u64): u64 {
-        apply(|x| apply(|y| x + y + c, x), 10)
+        apply(|x| apply(|y| x + y + c + borrow_global<R>(@0xCAFE).v, x), 10)
     }
 }",
     )]);

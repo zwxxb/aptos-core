@@ -1,23 +1,23 @@
 {
-  "0xcafe::nested": {
-    "file": "<TEMPDIR>/nested.move",
+  "0xcafe::inl": {
+    "file": "<TEMPDIR>/inl.move",
     "span": [
       1,
-      9
+      19
     ],
     "friends": [],
     "attributes": [],
     "functions": [
       {
-        "name": "apply",
-        "file": "<TEMPDIR>/nested.move",
+        "name": "apply_inline",
+        "file": "<TEMPDIR>/inl.move",
         "span": [
-          4,
-          4
+          12,
+          14
         ],
         "visibility": "internal",
         "isEntry": false,
-        "isInline": false,
+        "isInline": true,
         "isNative": false,
         "isView": false,
         "attributes": [],
@@ -26,10 +26,6 @@
           {
             "name": "f",
             "type": "|u64|u64"
-          },
-          {
-            "name": "x",
-            "type": "u64"
           }
         ],
         "returnTypes": [
@@ -47,11 +43,44 @@
         "isLambdaLifted": false
       },
       {
-        "name": "outer",
-        "file": "<TEMPDIR>/nested.move",
+        "name": "inline_read",
+        "file": "<TEMPDIR>/inl.move",
         "span": [
-          6,
-          8
+          4,
+          6
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": true,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "acquiresInferred": [
+          "0xcafe::inl::Config"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::inl::Config"
+          ],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "uses_inline",
+        "file": "<TEMPDIR>/inl.move",
+        "span": [
+          8,
+          10
         ],
         "visibility": "public",
         "isEntry": false,
@@ -60,124 +89,64 @@
         "isView": false,
         "attributes": [],
         "typeParams": [],
-        "params": [
-          {
-            "name": "c",
-            "type": "u64"
-          }
-        ],
+        "params": [],
         "returnTypes": [
           "u64"
         ],
         "acquiresDeclared": [],
         "acquiresInferred": [
-          "0xcafe::nested::R"
-        ],
-        "resourceAccess": {
-          "reads": [],
-          "writes": []
-        },
-        "createsClosures": [
-          "0xcafe::nested::__lambda__2__outer"
-        ],
-        "invokesFunctionValues": false,
-        "effectsComplete": true,
-        "isLambdaLifted": false
-      },
-      {
-        "name": "__lambda__1__outer",
-        "file": "<TEMPDIR>/nested.move",
-        "span": [
-          7,
-          7
-        ],
-        "visibility": "internal",
-        "isEntry": false,
-        "isInline": false,
-        "isNative": false,
-        "isView": false,
-        "attributes": [],
-        "typeParams": [],
-        "params": [
-          {
-            "name": "c",
-            "type": "u64"
-          },
-          {
-            "name": "x",
-            "type": "u64"
-          },
-          {
-            "name": "y",
-            "type": "u64"
-          }
-        ],
-        "returnTypes": [
-          "u64"
-        ],
-        "acquiresDeclared": [],
-        "acquiresInferred": [
-          "0xcafe::nested::R"
+          "0xcafe::inl::Config"
         ],
         "resourceAccess": {
           "reads": [
-            "0xcafe::nested::R"
+            "0xcafe::inl::Config"
           ],
           "writes": []
         },
         "createsClosures": [],
         "invokesFunctionValues": false,
         "effectsComplete": true,
-        "isLambdaLifted": true,
-        "definedIn": "outer"
+        "isLambdaLifted": false
       },
       {
-        "name": "__lambda__2__outer",
-        "file": "<TEMPDIR>/nested.move",
+        "name": "uses_inline_with_lambda",
+        "file": "<TEMPDIR>/inl.move",
         "span": [
-          7,
-          7
+          16,
+          18
         ],
-        "visibility": "internal",
+        "visibility": "public",
         "isEntry": false,
         "isInline": false,
         "isNative": false,
         "isView": false,
         "attributes": [],
         "typeParams": [],
-        "params": [
-          {
-            "name": "c",
-            "type": "u64"
-          },
-          {
-            "name": "x",
-            "type": "u64"
-          }
-        ],
+        "params": [],
         "returnTypes": [
           "u64"
         ],
         "acquiresDeclared": [],
-        "acquiresInferred": [],
+        "acquiresInferred": [
+          "0xcafe::inl::Config"
+        ],
         "resourceAccess": {
-          "reads": [],
+          "reads": [
+            "0xcafe::inl::Config"
+          ],
           "writes": []
         },
-        "createsClosures": [
-          "0xcafe::nested::__lambda__1__outer"
-        ],
+        "createsClosures": [],
         "invokesFunctionValues": false,
         "effectsComplete": true,
-        "isLambdaLifted": true,
-        "definedIn": "outer"
+        "isLambdaLifted": false
       }
     ],
     "structs": [
       {
         "kind": "struct",
-        "name": "R",
-        "file": "<TEMPDIR>/nested.move",
+        "name": "Config",
+        "file": "<TEMPDIR>/inl.move",
         "span": [
           2,
           2
