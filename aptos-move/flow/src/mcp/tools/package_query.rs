@@ -9,7 +9,10 @@ use super::super::{
 };
 use move_compiler_v2::env_pipeline::lambda_lifter::is_lambda_lifted_fun as is_lambda_lifted;
 use move_model::{
-    ast::{Attribute, AttributeValue, ExpData, Operation, Value, VisitorPosition},
+    ast::{
+        AccessSpecifierKind, Attribute, AttributeValue, ExpData, Operation, ResourceSpecifier,
+        Value, VisitorPosition,
+    },
     model::{
         FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, NamedConstantEnv, QualifiedId, StructEnv,
         TypeParameter, Visibility,
@@ -417,6 +420,8 @@ struct FunctionFacts {
     type_params: Vec<TypeParamFacts>,
     params: Vec<ParamFacts>,
     return_types: Vec<String>,
+    /// Resources named in a source-level `acquires` annotation.
+    acquires_declared: Vec<String>,
     acquires_inferred: Vec<String>,
     resource_access: ResourceAccessFacts,
     /// Fully-qualified names of functions for which this body creates closures
@@ -553,6 +558,26 @@ fn defining_functions(
     result
 }
 
+/// Resources listed in the function's source `acquires` annotation (legacy
+/// access specifiers), as fully-qualified names without type arguments,
+/// matching the `acquiresInferred` rendering.
+fn declared_acquires(func: &FunctionEnv<'_>) -> Vec<String> {
+    let env = func.module_env.env;
+    let mut result = BTreeSet::new();
+    for spec in func.get_access_specifiers().unwrap_or_default() {
+        if spec.kind != AccessSpecifierKind::LegacyAcquires {
+            continue;
+        }
+        if let ResourceSpecifier::Resource(qid) = &spec.resource.1 {
+            result.insert(
+                env.get_struct(qid.to_qualified_id())
+                    .get_full_name_with_address(),
+            );
+        }
+    }
+    result.into_iter().collect()
+}
+
 fn build_function_facts(
     env: &GlobalEnv,
     func: &FunctionEnv<'_>,
@@ -613,6 +638,7 @@ fn build_function_facts(
         type_params: type_params_to_facts(env, &func.get_type_parameters()),
         params,
         return_types,
+        acquires_declared: declared_acquires(func),
         acquires_inferred,
         resource_access,
         creates_closures: scan.creates_closures.into_iter().collect(),

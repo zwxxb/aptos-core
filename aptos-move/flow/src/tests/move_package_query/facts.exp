@@ -45,6 +45,9 @@
         "returnTypes": [
           "u64"
         ],
+        "acquiresDeclared": [
+          "0xcafe::coin::CoinStore"
+        ],
         "acquiresInferred": [
           "0xcafe::coin::CoinStore"
         ],
@@ -90,6 +93,9 @@
           }
         ],
         "returnTypes": [],
+        "acquiresDeclared": [
+          "0xcafe::coin::CoinStore"
+        ],
         "acquiresInferred": [
           "0xcafe::coin::CoinStore"
         ],
@@ -139,6 +145,7 @@
         "returnTypes": [
           "bool"
         ],
+        "acquiresDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [
@@ -178,6 +185,7 @@
           }
         ],
         "returnTypes": [],
+        "acquiresDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [],
@@ -214,6 +222,7 @@
           "u64",
           "u64"
         ],
+        "acquiresDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [],
@@ -252,6 +261,9 @@
         ],
         "returnTypes": [
           "u64"
+        ],
+        "acquiresDeclared": [
+          "0xcafe::coin::CoinStore"
         ],
         "acquiresInferred": [
           "0xcafe::coin::CoinStore"
@@ -499,6 +511,7 @@
         "returnTypes": [
           "0xcafe::coin::Receipt"
         ],
+        "acquiresDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [],
@@ -530,6 +543,7 @@
           }
         ],
         "returnTypes": [],
+        "acquiresDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [],

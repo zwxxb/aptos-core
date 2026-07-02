@@ -31,6 +31,7 @@
         "returnTypes": [
           "u64"
         ],
+        "acquiresDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [],
@@ -64,6 +65,7 @@
         "returnTypes": [
           "u64"
         ],
+        "acquiresDeclared": [],
         "acquiresInferred": [],
         "resourceAccess": {
           "reads": [],
