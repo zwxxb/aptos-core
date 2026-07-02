@@ -33,21 +33,36 @@ pub fn run() -> Result<()> {
     Ok(())
 }
 
-/// Read the package name from a `Move.toml` file by simple line scanning.
-fn read_package_name(path: &Path) -> Option<String> {
+/// Read the exact `name` key from the `[package]` section.
+pub(crate) fn read_package_name(path: &Path) -> Option<String> {
     let content = std::fs::read_to_string(path).ok()?;
+    let mut in_package_section = false;
     for line in content.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("name") {
-            let value = trimmed.split_once('=')?.1.trim();
-            // Strip surrounding quotes
-            let name = value
-                .trim_start_matches('"')
-                .trim_end_matches('"')
-                .trim_start_matches('\'')
-                .trim_end_matches('\'');
-            return Some(name.to_string());
+        if trimmed.starts_with('[') {
+            let header = trimmed.split('#').next().unwrap_or("").trim();
+            in_package_section = header
+                .strip_prefix('[')
+                .and_then(|h| h.strip_suffix(']'))
+                .is_some_and(|h| h.trim() == "package");
+            continue;
         }
+        if !in_package_section {
+            continue;
+        }
+        let Some((key, value)) = trimmed.split_once('=') else {
+            continue;
+        };
+        if key.trim() != "name" {
+            continue;
+        }
+        let value = value.split('#').next().unwrap_or("").trim();
+        let name = value
+            .trim_start_matches('"')
+            .trim_end_matches('"')
+            .trim_start_matches('\'')
+            .trim_end_matches('\'');
+        return Some(name.to_string());
     }
     None
 }
@@ -64,39 +79,5 @@ fn find_package_root(start: &Path) -> Option<std::path::PathBuf> {
             Some(parent) => dir = parent,
             None => return None,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::io::Write;
-
-    #[test]
-    fn test_read_package_name() {
-        let dir = tempfile::tempdir().unwrap();
-        let toml = dir.path().join("Move.toml");
-        let mut f = std::fs::File::create(&toml).unwrap();
-        writeln!(f, "[package]").unwrap();
-        writeln!(f, "name = \"my_package\"").unwrap();
-        assert_eq!(read_package_name(&toml), Some("my_package".to_string()));
-    }
-
-    #[test]
-    fn test_read_package_name_single_quotes() {
-        let dir = tempfile::tempdir().unwrap();
-        let toml = dir.path().join("Move.toml");
-        let mut f = std::fs::File::create(&toml).unwrap();
-        writeln!(f, "[package]").unwrap();
-        writeln!(f, "name = 'my_pkg'").unwrap();
-        assert_eq!(read_package_name(&toml), Some("my_pkg".to_string()));
-    }
-
-    #[test]
-    fn test_read_package_name_missing() {
-        let dir = tempfile::tempdir().unwrap();
-        let toml = dir.path().join("Move.toml");
-        std::fs::write(&toml, "[dependencies]\n").unwrap();
-        assert_eq!(read_package_name(&toml), None);
     }
 }

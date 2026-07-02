@@ -1,0 +1,272 @@
+{
+  "0xcafe::stored": {
+    "file": "<TEMPDIR>/stored.move",
+    "span": [
+      1,
+      19
+    ],
+    "friends": [],
+    "attributes": [],
+    "functions": [
+      {
+        "name": "apply",
+        "file": "<TEMPDIR>/stored.move",
+        "span": [
+          4,
+          4
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "f",
+            "type": "|u64|u64"
+          },
+          {
+            "name": "x",
+            "type": "u64"
+          }
+        ],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": true,
+        "effectsComplete": false,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "lifted_calls_helper",
+        "file": "<TEMPDIR>/stored.move",
+        "span": [
+          12,
+          14
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "x",
+            "type": "u64"
+          }
+        ],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [
+          "0xcafe::stored::Config"
+        ],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [
+          "0xcafe::stored::__lambda__1__lifted_calls_helper"
+        ],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "read_config",
+        "file": "<TEMPDIR>/stored.move",
+        "span": [
+          16,
+          18
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [
+          "0xcafe::stored::Config"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::stored::Config"
+          ],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "setup",
+        "file": "<TEMPDIR>/stored.move",
+        "span": [
+          7,
+          9
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "x",
+            "type": "u64"
+          }
+        ],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [
+          "0xcafe::stored::Config"
+        ],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [
+          "0xcafe::stored::__lambda__1__setup"
+        ],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "__lambda__1__lifted_calls_helper",
+        "file": "<TEMPDIR>/stored.move",
+        "span": [
+          13,
+          13
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "v",
+            "type": "u64"
+          }
+        ],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [
+          "0xcafe::stored::Config"
+        ],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": true,
+        "definedIn": "lifted_calls_helper"
+      },
+      {
+        "name": "__lambda__1__setup",
+        "file": "<TEMPDIR>/stored.move",
+        "span": [
+          8,
+          8
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "v",
+            "type": "u64"
+          }
+        ],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [
+          "0xcafe::stored::Config"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::stored::Config"
+          ],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": true,
+        "definedIn": "setup"
+      }
+    ],
+    "structs": [
+      {
+        "kind": "struct",
+        "name": "Config",
+        "file": "<TEMPDIR>/stored.move",
+        "span": [
+          2,
+          2
+        ],
+        "abilities": [
+          "key"
+        ],
+        "typeParams": [],
+        "fields": [
+          {
+            "name": "v",
+            "type": "u64",
+            "positional": false
+          }
+        ],
+        "attributes": []
+      }
+    ],
+    "constants": []
+  }
+}

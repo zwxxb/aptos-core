@@ -23,6 +23,14 @@ async fn move_package_query_module_summary() {
     public entry fun burn(t: Token) {
         let Token { value: _, owner: _ } = t;
     }
+
+    package fun holds(t: &Token): bool {
+        t.value > 0
+    }
+
+    fun internal_helper(v: u64): u64 {
+        v + 1
+    }
 }",
     )]);
     let dir = pkg.path().to_str().unwrap();

@@ -3,9 +3,11 @@
 
 mod clean;
 mod deprecated_syntax;
+mod deprecated_syntax_boundaries;
 mod deprecated_syntax_contexts;
 mod format;
 mod old_invalid;
 mod old_loop_invariant;
 mod parse_error;
 mod spec_deref_borrow;
+mod spec_walker_coverage;

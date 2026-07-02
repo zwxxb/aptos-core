@@ -23,11 +23,23 @@
     "functions": [
       {
         "name": "burn",
-        "signature": "public entry fun burn(t: Token)"
+        "signature": "public entry fun burn(t: 0xcafe::token::Token)",
+        "isLambdaLifted": false
+      },
+      {
+        "name": "holds",
+        "signature": "package fun holds(t: &0xcafe::token::Token): bool",
+        "isLambdaLifted": false
+      },
+      {
+        "name": "internal_helper",
+        "signature": "fun internal_helper(v: u64): u64",
+        "isLambdaLifted": false
       },
       {
         "name": "mint",
-        "signature": "public fun mint(amount: u64,owner: address): Token"
+        "signature": "public fun mint(amount: u64, owner: address): 0xcafe::token::Token",
+        "isLambdaLifted": false
       }
     ]
   }

@@ -1,0 +1,178 @@
+{
+  "0xcafe::inl": {
+    "file": "<TEMPDIR>/inl.move",
+    "span": [
+      1,
+      19
+    ],
+    "friends": [],
+    "attributes": [],
+    "functions": [
+      {
+        "name": "apply_inline",
+        "file": "<TEMPDIR>/inl.move",
+        "span": [
+          12,
+          14
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": true,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "f",
+            "type": "|u64|u64"
+          }
+        ],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": true,
+        "effectsComplete": false,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "inline_read",
+        "file": "<TEMPDIR>/inl.move",
+        "span": [
+          4,
+          6
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": true,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [
+          "0xcafe::inl::Config"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::inl::Config"
+          ],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "uses_inline",
+        "file": "<TEMPDIR>/inl.move",
+        "span": [
+          8,
+          10
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [
+          "0xcafe::inl::Config"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::inl::Config"
+          ],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "uses_inline_with_lambda",
+        "file": "<TEMPDIR>/inl.move",
+        "span": [
+          16,
+          18
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [
+          "0xcafe::inl::Config"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::inl::Config"
+          ],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      }
+    ],
+    "structs": [
+      {
+        "kind": "struct",
+        "name": "Config",
+        "file": "<TEMPDIR>/inl.move",
+        "span": [
+          2,
+          2
+        ],
+        "abilities": [
+          "key"
+        ],
+        "typeParams": [],
+        "fields": [
+          {
+            "name": "v",
+            "type": "u64",
+            "positional": false
+          }
+        ],
+        "attributes": []
+      }
+    ],
+    "constants": []
+  }
+}

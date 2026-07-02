@@ -5,20 +5,38 @@
 
 use super::super::{
     common::{mcp_err, resolve_function, tool_error, try_call},
+    package_data::PackageData,
     session::{into_call_tool_result, FlowSession},
 };
+use move_compiler_v2::env_pipeline::lambda_lifter::is_lambda_lifted_fun as is_lambda_lifted;
 use move_model::{
-    ast::{Attribute, ExpData, Operation},
+    ast::{
+        AccessSpecifierKind, Attribute, AttributeValue, ExpData, Operation, ResourceSpecifier,
+        Value, VisitorPosition,
+    },
     model::{
         FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, NamedConstantEnv, QualifiedId, StructEnv,
-        TypeParameter, Visibility,
+        StructId, TypeParameter, Visibility,
     },
-    ty::ReferenceKind,
+    ty::{ReferenceKind, Type, TypeDisplayContext},
 };
 use rmcp::{
     handler::server::wrapper::Parameters, model::CallToolResult, schemars, tool, tool_router,
 };
 use std::collections::{BTreeMap, BTreeSet};
+
+/// Avoids tagging user functions that merely contain the lambda marker.
+fn is_lifted_closure(func: &FunctionEnv<'_>) -> bool {
+    if !is_lambda_lifted(func) {
+        return false;
+    }
+    let name = func.get_name_str();
+    let Some(rest) = name.strip_prefix("__lambda__") else {
+        return false;
+    };
+    let digits = rest.chars().take_while(|c| c.is_ascii_digit()).count();
+    digits > 0 && rest[digits..].contains("__")
+}
 
 // ========== MCP Tool types ==========
 
@@ -39,13 +57,13 @@ enum QueryType {
     DepGraph,
     /// Returns a summary of each module's constants, structs, and functions.
     ModuleSummary,
-    /// Returns a function-level call graph as a map from each function to the functions it calls.
+    /// Returns a function-level static call graph.
     CallGraph,
     /// Returns direct and transitive calls/uses by a given function.
     /// "called" = direct calls; "used" = direct calls + closure captures.
+    /// Function-value invocations make the static sets lower bounds.
     FunctionUsage,
-    /// Returns per-module facts: functions, structs, constants, friends,
-    /// attributes, and source locations.
+    /// Returns per-module facts.
     Facts,
 }
 
@@ -55,7 +73,7 @@ enum QueryType {
 impl FlowSession {
     #[tool(
         description = "Query structural information about a Move package.",
-        annotations(read_only_hint = false, destructive_hint = false)
+        annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn move_package_query(
         &self,
@@ -92,6 +110,7 @@ impl FlowSession {
                 Ok(into_call_tool_result(&result))
             },
             QueryType::CallGraph => {
+                ensure_no_compilation_errors(&data, "call_graph")?;
                 let result = build_call_graph(data.env());
                 log::info!(
                     "move_package_query call_graph: {} function(s)",
@@ -100,6 +119,7 @@ impl FlowSession {
                 Ok(into_call_tool_result(&result))
             },
             QueryType::FunctionUsage => {
+                ensure_no_compilation_errors(&data, "function_usage")?;
                 let function = params.function.ok_or_else(|| {
                     mcp_err("\"function\" parameter is required for function_usage query")
                 })?;
@@ -108,7 +128,8 @@ impl FlowSession {
                 Ok(into_call_tool_result(&result))
             },
             QueryType::Facts => {
-                let result = build_facts(data.env());
+                ensure_no_compilation_errors(&data, "facts")?;
+                let result = try_call("failed to build facts", || build_facts(data.env()))?;
                 log::info!("move_package_query facts: {} module(s)", result.len());
                 Ok(into_call_tool_result(&result))
             },
@@ -116,9 +137,20 @@ impl FlowSession {
     }
 }
 
+/// Semantic queries need complete body-level compiler analysis.
+fn ensure_no_compilation_errors(data: &PackageData, query: &str) -> Result<(), rmcp::ErrorData> {
+    if data.has_compilation_errors() {
+        return Err(mcp_err(format!(
+            "package has compilation errors; {query} would reflect a partially \
+             compiled package. Run move_package_status for diagnostics"
+        )));
+    }
+    Ok(())
+}
+
 // ========== Query: dep_graph ==========
 
-/// Returns an adjacency map: module name → set of modules it depends on.
+/// Returns an adjacency map from module name to dependencies.
 fn build_dep_graph(env: &GlobalEnv) -> BTreeMap<String, BTreeSet<String>> {
     env.get_primary_target_modules()
         .iter()
@@ -135,10 +167,6 @@ fn build_dep_graph(env: &GlobalEnv) -> BTreeMap<String, BTreeSet<String>> {
 }
 
 // ========== Query: module_summary ==========
-
-// Response types for module_summary. Using typed structs rather than plain
-// strings ensures the MCP client receives structured JSON it can access
-// programmatically.
 
 #[derive(Debug, serde::Serialize)]
 struct ModuleSummary {
@@ -163,9 +191,82 @@ struct StructSummary {
 }
 
 #[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct FunctionSummary {
     name: String,
     signature: String,
+    /// True for compiler-synthesized lambda-lifted functions.
+    is_lambda_lifted: bool,
+}
+
+/// Render a Move function header with fully-qualified types.
+fn function_signature(env: &GlobalEnv, func: &FunctionEnv<'_>) -> String {
+    let type_ctx = qualified_type_ctx(func.get_type_display_ctx());
+    let symbol_pool = env.symbol_pool();
+
+    let mut parts: Vec<String> = Vec::new();
+    let vis = visibility_str(func);
+    if vis != "internal" {
+        parts.push(vis);
+    }
+    if func.is_entry() {
+        parts.push("entry".to_string());
+    } else if func.is_inline() {
+        parts.push("inline".to_string());
+    }
+    if func.is_native() {
+        parts.push("native".to_string());
+    }
+    parts.push("fun".to_string());
+
+    let mut s = parts.join(" ");
+    s.push(' ');
+    s.push_str(&func.get_name_str());
+
+    let type_params = func.get_type_parameters();
+    if !type_params.is_empty() {
+        s.push('<');
+        let tp_strs: Vec<String> = type_params
+            .iter()
+            .map(|tp| {
+                let name = tp.0.display(symbol_pool).to_string();
+                let abilities: Vec<String> =
+                    tp.1.abilities.into_iter().map(|a| a.to_string()).collect();
+                if abilities.is_empty() {
+                    name
+                } else {
+                    format!("{}: {}", name, abilities.join(" + "))
+                }
+            })
+            .collect();
+        s.push_str(&tp_strs.join(", "));
+        s.push('>');
+    }
+
+    s.push('(');
+    let params: Vec<String> = func
+        .get_parameters_ref()
+        .iter()
+        .map(|p| format!("{}: {}", p.0.display(symbol_pool), p.1.display(&type_ctx)))
+        .collect();
+    s.push_str(&params.join(", "));
+    s.push(')');
+
+    let ret = format_return_types(func, &type_ctx);
+    match ret.len() {
+        0 => {},
+        1 => {
+            s.push_str(": ");
+            s.push_str(&ret[0]);
+        },
+        _ => {
+            s.push_str(": (");
+            s.push_str(&ret.join(", "));
+            s.push(')');
+        },
+    }
+
+    s
 }
 
 /// Build a summary of each target module's constants, structs, and functions.
@@ -178,14 +279,7 @@ fn build_module_summary(env: &GlobalEnv) -> BTreeMap<String, ModuleSummary> {
 
             let constants: Vec<ConstantSummary> = module
                 .get_named_constants()
-                .map(|c| {
-                    let ctx = c.get_type_display_ctx();
-                    ConstantSummary {
-                        name: c.get_name().display(env.symbol_pool()).to_string(),
-                        type_: c.get_type().display(&ctx).to_string(),
-                        value: env.display(&c.get_value()).to_string(),
-                    }
-                })
+                .map(|c| build_constant_summary(env, &c))
                 .collect();
 
             let structs: Vec<StructSummary> = module
@@ -218,7 +312,8 @@ fn build_module_summary(env: &GlobalEnv) -> BTreeMap<String, ModuleSummary> {
                 .get_functions()
                 .map(|f| FunctionSummary {
                     name: f.get_name_str(),
-                    signature: f.get_header_string(),
+                    signature: function_signature(env, &f),
+                    is_lambda_lifted: is_lifted_closure(&f),
                 })
                 .collect();
 
@@ -233,7 +328,7 @@ fn build_module_summary(env: &GlobalEnv) -> BTreeMap<String, ModuleSummary> {
 
 // ========== Query: call_graph ==========
 
-/// Returns an adjacency map: function name → set of called function names.
+/// Returns an adjacency map from function name to called functions.
 fn build_call_graph(env: &GlobalEnv) -> BTreeMap<String, BTreeSet<String>> {
     env.get_primary_target_modules()
         .iter()
@@ -256,16 +351,21 @@ fn build_call_graph(env: &GlobalEnv) -> BTreeMap<String, BTreeSet<String>> {
 // ========== Query: function_usage ==========
 
 #[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct FunctionUsage {
     called: BTreeSet<String>,
     called_transitive: BTreeSet<String>,
     used: BTreeSet<String>,
     used_transitive: BTreeSet<String>,
+    creates_closures: BTreeSet<String>,
+    invokes_function_values: bool,
 }
 
 /// Build function usage for a given function.
 fn build_function_usage(env: &GlobalEnv, function: &str) -> Result<FunctionUsage, rmcp::ErrorData> {
     let func = resolve_function(env, function)?;
+    let type_ctx = qualified_type_ctx(func.get_type_display_ctx());
+    let scan = scan_body(env, &func, &type_ctx);
 
     let called = func.get_called_functions().cloned().unwrap_or_default();
     let used = func.get_used_functions().cloned().unwrap_or_default();
@@ -283,6 +383,8 @@ fn build_function_usage(env: &GlobalEnv, function: &str) -> Result<FunctionUsage
         called_transitive: qids_to_names(env, &called_transitive),
         used: qids_to_names(env, &used),
         used_transitive: qids_to_names(env, &used_transitive),
+        creates_closures: scan.creates_closures,
+        invokes_function_values: scan.invokes_function_values,
     })
 }
 
@@ -293,8 +395,6 @@ fn qids_to_names(env: &GlobalEnv, qids: &BTreeSet<QualifiedId<FunId>>) -> BTreeS
 }
 
 // ========== Query: facts ==========
-//
-// Per-module facts read from the compiler's GlobalEnv. Wire keys use camelCase.
 
 /// Source file and 1-indexed `[start_line, end_line]` span for an item.
 #[derive(Debug, serde::Serialize)]
@@ -328,6 +428,10 @@ struct FriendFacts {
 #[serde(rename_all = "camelCase")]
 struct AttributeFacts {
     name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    value: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    args: Vec<AttributeFacts>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -359,7 +463,6 @@ struct FieldFacts {
 #[serde(rename_all = "camelCase")]
 struct VariantFacts {
     name: String,
-    /// One of `"unit"`, `"positional"`, `"named"`.
     kind: String,
     fields: Vec<FieldFacts>,
     attributes: Vec<AttributeFacts>,
@@ -372,13 +475,15 @@ struct ResourceAccessFacts {
     writes: Vec<String>,
 }
 
+/// Per-function facts. Body effects are local to this body; compose with the
+/// call graph for named callees. When `effectsComplete` is false, effect fields
+/// are lower bounds.
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct FunctionFacts {
     name: String,
     #[serde(flatten)]
     location: SourceLocation,
-    /// One of `"public"`, `"friend"`, `"package"`, `"internal"`.
     visibility: String,
     is_entry: bool,
     is_inline: bool,
@@ -387,15 +492,23 @@ struct FunctionFacts {
     attributes: Vec<AttributeFacts>,
     type_params: Vec<TypeParamFacts>,
     params: Vec<ParamFacts>,
-    return_type: Option<String>,
+    return_types: Vec<String>,
+    acquires_declared: Vec<String>,
+    reads_declared: Vec<String>,
+    writes_declared: Vec<String>,
     acquires_inferred: Vec<String>,
     resource_access: ResourceAccessFacts,
+    creates_closures: Vec<String>,
+    invokes_function_values: bool,
+    effects_complete: bool,
+    is_lambda_lifted: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    defined_in: Option<String>,
 }
 
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct StructFacts {
-    /// `"struct"` or `"enum"`.
     kind: String,
     name: String,
     #[serde(flatten)]
@@ -409,7 +522,6 @@ struct StructFacts {
     attributes: Vec<AttributeFacts>,
 }
 
-/// Build per-module facts for every primary target module in `env`.
 fn build_facts(env: &GlobalEnv) -> BTreeMap<String, ModuleFacts> {
     env.get_primary_target_modules()
         .iter()
@@ -434,9 +546,11 @@ fn build_module_facts(env: &GlobalEnv, module: &ModuleEnv<'_>) -> ModuleFacts {
 
     let attributes = attrs_to_facts(env, module.get_attributes());
 
+    let defined_in = defining_functions(env, module);
+    let lifted_acq = lifted_acquires(env, module);
     let functions: Vec<FunctionFacts> = module
         .get_functions()
-        .map(|f| build_function_facts(env, &f))
+        .map(|f| build_function_facts(env, &f, &defined_in, &lifted_acq))
         .collect();
 
     let structs: Vec<StructFacts> = module
@@ -464,13 +578,177 @@ fn build_constant_summary(env: &GlobalEnv, c: &NamedConstantEnv<'_>) -> Constant
     ConstantSummary {
         name: c.get_name().display(env.symbol_pool()).to_string(),
         type_: c.get_type().display(&ctx).to_string(),
-        value: env.display(&c.get_value()).to_string(),
+        value: value_to_move_source(env, &c.get_value()),
     }
 }
 
-fn build_function_facts(env: &GlobalEnv, func: &FunctionEnv<'_>) -> FunctionFacts {
+/// Maps each lambda-lifted function to the user function that defines it.
+fn defining_functions(
+    env: &GlobalEnv,
+    module: &ModuleEnv<'_>,
+) -> BTreeMap<QualifiedId<FunId>, String> {
+    let mut result = BTreeMap::new();
+    for f in module.get_functions() {
+        if !is_lifted_closure(&f) {
+            continue;
+        }
+        let lifted = f.get_qualified_id();
+        let mut current = lifted;
+        let mut visited = BTreeSet::new();
+        let name = loop {
+            let Some(host) = env
+                .get_function(current)
+                .get_using_functions()
+                .and_then(|using| using.into_iter().next())
+            else {
+                break None;
+            };
+            if !visited.insert(host) {
+                break None;
+            }
+            let host_env = env.get_function(host);
+            if !is_lifted_closure(&host_env) {
+                break Some(host_env.get_name_str());
+            }
+            current = host;
+        };
+        if let Some(name) = name {
+            result.insert(lifted, name);
+        }
+    }
+    result
+}
+
+/// Recompute same-module acquires for lifted functions.
+fn lifted_acquires(env: &GlobalEnv, module: &ModuleEnv<'_>) -> BTreeMap<FunId, BTreeSet<StructId>> {
+    let mid = module.get_id();
+    let mut result: BTreeMap<FunId, BTreeSet<StructId>> = BTreeMap::new();
+    let mut callees: BTreeMap<FunId, BTreeSet<FunId>> = BTreeMap::new();
+    for f in module.get_functions() {
+        if !is_lifted_closure(&f) {
+            continue;
+        }
+        let mut direct = BTreeSet::new();
+        let mut calls = BTreeSet::new();
+        if let Some(body) = f.get_def() {
+            body.visit_pre_order(&mut |e| {
+                if let ExpData::Call(node_id, op, _) = e {
+                    match op {
+                        Operation::MoveFrom | Operation::BorrowGlobal(..) => {
+                            if let Some(Type::Struct(s_mid, sid, _)) =
+                                env.get_node_instantiation(*node_id).first()
+                            {
+                                if *s_mid == mid {
+                                    direct.insert(*sid);
+                                }
+                            }
+                        },
+                        Operation::MoveFunction(c_mid, c_fid) if *c_mid == mid => {
+                            calls.insert(*c_fid);
+                        },
+                        _ => {},
+                    }
+                }
+                true
+            });
+        }
+        result.insert(f.get_id(), direct);
+        callees.insert(f.get_id(), calls);
+    }
+    loop {
+        let mut changed = false;
+        for (fid, calls) in &callees {
+            let mut acc = result.get(fid).cloned().unwrap_or_default();
+            for callee in calls {
+                match result.get(callee) {
+                    Some(lifted) => acc.extend(lifted.iter().copied()),
+                    None => {
+                        if let Some(stored) = module.get_function(*callee).get_acquired_structs() {
+                            acc.extend(stored.iter().copied());
+                        }
+                    },
+                }
+            }
+            if acc.len() != result.get(fid).map_or(0, BTreeSet::len) {
+                result.insert(*fid, acc);
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    result
+}
+
+struct DeclaredAccess {
+    acquires: Vec<String>,
+    reads: Vec<String>,
+    writes: Vec<String>,
+}
+
+/// Renders declared access specifiers into lists by kind.
+fn declared_access(func: &FunctionEnv<'_>, type_ctx: &TypeDisplayContext<'_>) -> DeclaredAccess {
+    let env = func.module_env.env;
+    let mut result = DeclaredAccess {
+        acquires: vec![],
+        reads: vec![],
+        writes: vec![],
+    };
+    for spec in func.get_access_specifiers().unwrap_or_default() {
+        let rendered = match &spec.resource.1 {
+            ResourceSpecifier::Any => "*".to_string(),
+            ResourceSpecifier::DeclaredAtAddress(addr) => {
+                format!("{}::*", env.display(addr))
+            },
+            ResourceSpecifier::DeclaredInModule(mid) => {
+                format!("{}::*", env.get_module(*mid).get_full_name_str())
+            },
+            ResourceSpecifier::Resource(qid) => {
+                let base = env
+                    .get_struct(qid.to_qualified_id())
+                    .get_full_name_with_address();
+                if qid.inst.is_empty() {
+                    base
+                } else {
+                    let args = qid
+                        .inst
+                        .iter()
+                        .map(|t| t.display(type_ctx).to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    format!("{base}<{args}>")
+                }
+            },
+        };
+        let rendered = if spec.negated {
+            format!("!{rendered}")
+        } else {
+            rendered
+        };
+        match &spec.kind {
+            AccessSpecifierKind::LegacyAcquires => result.acquires.push(rendered),
+            AccessSpecifierKind::Reads => result.reads.push(rendered),
+            AccessSpecifierKind::Writes => result.writes.push(rendered),
+        }
+    }
+    result.acquires.sort();
+    result.acquires.dedup();
+    result.reads.sort();
+    result.reads.dedup();
+    result.writes.sort();
+    result.writes.dedup();
+    result
+}
+
+fn build_function_facts(
+    env: &GlobalEnv,
+    func: &FunctionEnv<'_>,
+    defined_in: &BTreeMap<QualifiedId<FunId>, String>,
+    lifted_acq: &BTreeMap<FunId, BTreeSet<StructId>>,
+) -> FunctionFacts {
     let location = loc_to_file_span(env, &func.get_loc());
-    let type_ctx = func.get_type_display_ctx();
+    let type_ctx = qualified_type_ctx(func.get_type_display_ctx());
 
     let symbol_pool = env.symbol_pool();
     let params: Vec<ParamFacts> = func
@@ -482,10 +760,14 @@ fn build_function_facts(env: &GlobalEnv, func: &FunctionEnv<'_>) -> FunctionFact
         })
         .collect();
 
-    let return_type = format_return_type(func, &type_ctx);
+    let return_types = format_return_types(func, &type_ctx);
 
-    let acquires_inferred: Vec<String> = func
-        .get_acquired_structs()
+    let acquired: Option<BTreeSet<StructId>> = if is_lifted_closure(func) {
+        lifted_acq.get(&func.get_id()).cloned()
+    } else {
+        func.get_acquired_structs().cloned()
+    };
+    let acquires_inferred: Vec<String> = acquired
         .map(|set| {
             set.iter()
                 .map(|sid| {
@@ -497,13 +779,21 @@ fn build_function_facts(env: &GlobalEnv, func: &FunctionEnv<'_>) -> FunctionFact
         })
         .unwrap_or_default();
 
-    let resource_access = build_resource_access(env, func, &type_ctx);
+    let access = declared_access(func, &type_ctx);
+
+    let scan = scan_body(env, func, &type_ctx);
+    let resource_access = ResourceAccessFacts {
+        reads: scan.reads.into_iter().collect(),
+        writes: scan.writes.into_iter().collect(),
+    };
+    let effects_complete =
+        !func.is_native() && func.get_def().is_some() && !scan.invokes_function_values;
 
     let attributes = attrs_to_facts(env, func.get_attributes());
-    let is_view = func
-        .get_attributes()
-        .iter()
-        .any(|a| symbol_pool.string(a.name()).as_str() == "view");
+
+    let is_view = func.get_attributes().iter().any(|a| {
+        matches!(a, Attribute::Apply(..)) && symbol_pool.string(a.name()).as_str() == "view"
+    });
 
     FunctionFacts {
         name: func.get_name_str(),
@@ -516,15 +806,23 @@ fn build_function_facts(env: &GlobalEnv, func: &FunctionEnv<'_>) -> FunctionFact
         attributes,
         type_params: type_params_to_facts(env, &func.get_type_parameters()),
         params,
-        return_type,
+        return_types,
+        acquires_declared: access.acquires,
+        reads_declared: access.reads,
+        writes_declared: access.writes,
         acquires_inferred,
         resource_access,
+        creates_closures: scan.creates_closures.into_iter().collect(),
+        invokes_function_values: scan.invokes_function_values,
+        effects_complete,
+        is_lambda_lifted: is_lifted_closure(func),
+        defined_in: defined_in.get(&func.get_qualified_id()).cloned(),
     }
 }
 
 fn build_struct_facts(env: &GlobalEnv, s: &StructEnv<'_>) -> StructFacts {
     let location = loc_to_file_span(env, &s.get_loc());
-    let type_ctx = s.get_type_display_ctx();
+    let type_ctx = qualified_type_ctx(s.get_type_display_ctx());
     let symbol_pool = env.symbol_pool();
 
     let abilities: Vec<String> = s
@@ -603,13 +901,62 @@ fn type_params_to_facts(env: &GlobalEnv, params: &[TypeParameter]) -> Vec<TypePa
 }
 
 fn attrs_to_facts(env: &GlobalEnv, attrs: &[Attribute]) -> Vec<AttributeFacts> {
+    attrs.iter().map(|a| attr_to_facts(env, a)).collect()
+}
+
+/// Serialize a single attribute, preserving nested arguments.
+fn attr_to_facts(env: &GlobalEnv, attr: &Attribute) -> AttributeFacts {
     let symbol_pool = env.symbol_pool();
-    attrs
-        .iter()
-        .map(|a| AttributeFacts {
-            name: symbol_pool.string(a.name()).to_string(),
-        })
-        .collect()
+    match attr {
+        Attribute::Apply(_, name, sub) => AttributeFacts {
+            name: symbol_pool.string(*name).to_string(),
+            value: None,
+            args: sub.iter().map(|a| attr_to_facts(env, a)).collect(),
+        },
+        Attribute::Assign(_, name, val) => AttributeFacts {
+            name: symbol_pool.string(*name).to_string(),
+            value: Some(attr_value_to_string(env, val)),
+            args: vec![],
+        },
+    }
+}
+
+fn attr_value_to_string(env: &GlobalEnv, val: &AttributeValue) -> String {
+    match val {
+        AttributeValue::Value(_, v) => value_to_move_source(env, v),
+        AttributeValue::Name(_, module_opt, sym) => {
+            let name = sym.display(env.symbol_pool()).to_string();
+            match module_opt {
+                Some(module) => format!("{}::{}", module.display_full(env), name),
+                None => name,
+            }
+        },
+    }
+}
+
+/// Render Move values as source-shaped literals where the compiler display is rough.
+fn value_to_move_source(env: &GlobalEnv, val: &Value) -> String {
+    use std::fmt::Write as _;
+    match val {
+        Value::ByteArray(bytes) => {
+            let mut s = String::with_capacity(3 + bytes.len() * 2);
+            s.push_str("x\"");
+            for b in bytes {
+                let _ = write!(s, "{:02x}", b);
+            }
+            s.push('"');
+            s
+        },
+        Value::Vector(vs) => {
+            let inner = vs
+                .iter()
+                .map(|v| value_to_move_source(env, v))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("vector[{inner}]")
+        },
+        _ => env.display(val).to_string(),
+    }
 }
 
 fn visibility_str(func: &FunctionEnv<'_>) -> String {
@@ -624,93 +971,98 @@ fn visibility_str(func: &FunctionEnv<'_>) -> String {
     .to_string()
 }
 
-fn format_return_type(
-    func: &FunctionEnv<'_>,
-    type_ctx: &move_model::ty::TypeDisplayContext<'_>,
-) -> Option<String> {
-    use move_model::ty::Type;
-    let result = func.get_result_type();
-    if let Type::Tuple(ts) = &result
-        && ts.is_empty()
-    {
-        return None;
-    }
-    Some(result.display(type_ctx).to_string())
-}
-/// Empty when the function has no AST body.
-fn build_resource_access(
-    env: &GlobalEnv,
-    func: &FunctionEnv<'_>,
-    type_ctx: &move_model::ty::TypeDisplayContext<'_>,
-) -> ResourceAccessFacts {
-    let Some(body) = func.get_def() else {
-        return ResourceAccessFacts {
-            reads: vec![],
-            writes: vec![],
-        };
-    };
-    let mut reads = BTreeSet::new();
-    let mut writes = BTreeSet::new();
-    body.visit_pre_order(&mut |e| {
-        if let ExpData::Call(node_id, op, _) = e {
-            let (does_read, does_write) = match op {
-                Operation::Exists(_) | Operation::BorrowGlobal(ReferenceKind::Immutable) => {
-                    (true, false)
-                },
-                Operation::BorrowGlobal(ReferenceKind::Mutable) | Operation::MoveFrom => {
-                    (true, true)
-                },
-                Operation::MoveTo => (false, true),
-                _ => (false, false),
-            };
-            if does_read || does_write {
-                let insts = env.get_node_instantiation(*node_id);
-                if let Some(ty) = insts.first() {
-                    let ty = qualified_resource_name(env, ty, type_ctx);
-                    if does_read {
-                        reads.insert(ty.clone());
-                    }
-                    if does_write {
-                        writes.insert(ty);
-                    }
-                }
-            }
-        }
-        true
-    });
-    ResourceAccessFacts {
-        reads: reads.into_iter().collect(),
-        writes: writes.into_iter().collect(),
+/// Render struct types as `address::module::Name<...>`.
+fn qualified_type_ctx(base: TypeDisplayContext<'_>) -> TypeDisplayContext<'_> {
+    TypeDisplayContext {
+        display_module_addr: true,
+        use_module_qualification: true,
+        ..base
     }
 }
 
-/// Render the resource type of a global-storage operation as a fully-qualified
-/// `address::module::Struct<TypeArgs>` name, matching the format used by
-/// `acquiresInferred` so consumers can correlate the two. Falls back to the
-/// plain type display for non-struct types, which should not occur for storage
-/// operations.
-fn qualified_resource_name(
+fn format_return_types(func: &FunctionEnv<'_>, type_ctx: &TypeDisplayContext<'_>) -> Vec<String> {
+    func.get_result_type()
+        .flatten()
+        .iter()
+        .map(|t| t.display(type_ctx).to_string())
+        .collect()
+}
+/// Direct effects of a function body.
+#[derive(Default)]
+struct BodyScan {
+    reads: BTreeSet<String>,
+    writes: BTreeSet<String>,
+    creates_closures: BTreeSet<String>,
+    invokes_function_values: bool,
+}
+
+fn scan_body(
     env: &GlobalEnv,
-    ty: &move_model::ty::Type,
-    type_ctx: &move_model::ty::TypeDisplayContext<'_>,
-) -> String {
-    use move_model::ty::Type;
-    let Type::Struct(mid, sid, type_args) = ty else {
-        return ty.display(type_ctx).to_string();
+    func: &FunctionEnv<'_>,
+    type_ctx: &TypeDisplayContext<'_>,
+) -> BodyScan {
+    let mut scan = BodyScan::default();
+    let Some(body) = func.get_def() else {
+        return scan;
     };
-    let base = env
-        .get_struct(mid.qualified(*sid))
-        .get_full_name_with_address();
-    if type_args.is_empty() {
-        base
-    } else {
-        let args = type_args
-            .iter()
-            .map(|t| t.display(type_ctx).to_string())
-            .collect::<Vec<_>>()
-            .join(", ");
-        format!("{base}<{args}>")
-    }
+    let mut spec_depth = 0usize;
+    let mut lambda_depth = 0usize;
+    body.visit_positions(&mut |pos, e| {
+        match e {
+            ExpData::SpecBlock(..) => match pos {
+                VisitorPosition::Pre => spec_depth += 1,
+                VisitorPosition::Post => spec_depth -= 1,
+                _ => {},
+            },
+            ExpData::Lambda(..) => match pos {
+                VisitorPosition::Pre => lambda_depth += 1,
+                VisitorPosition::Post => lambda_depth -= 1,
+                _ => {},
+            },
+            ExpData::Invoke(_, callee, _)
+                if matches!(pos, VisitorPosition::Pre) && spec_depth == 0 && lambda_depth == 0 =>
+            {
+                if !matches!(callee.as_ref(), ExpData::Call(_, Operation::Closure(..), _)) {
+                    scan.invokes_function_values = true;
+                }
+            },
+            ExpData::Call(node_id, op, _)
+                if matches!(pos, VisitorPosition::Pre) && spec_depth == 0 && lambda_depth == 0 =>
+            {
+                if let Operation::Closure(mid, fid, _) = op {
+                    scan.creates_closures.insert(
+                        env.get_function(mid.qualified(*fid))
+                            .get_full_name_with_address(),
+                    );
+                } else {
+                    let (does_read, does_write) = match op {
+                        Operation::Exists(_)
+                        | Operation::BorrowGlobal(ReferenceKind::Immutable) => (true, false),
+                        Operation::BorrowGlobal(ReferenceKind::Mutable) | Operation::MoveFrom => {
+                            (true, true)
+                        },
+                        Operation::MoveTo => (false, true),
+                        _ => (false, false),
+                    };
+                    if does_read || does_write {
+                        let insts = env.get_node_instantiation(*node_id);
+                        if let Some(ty) = insts.first() {
+                            let ty = ty.display(type_ctx).to_string();
+                            if does_read {
+                                scan.reads.insert(ty.clone());
+                            }
+                            if does_write {
+                                scan.writes.insert(ty);
+                            }
+                        }
+                    }
+                }
+            },
+            _ => {},
+        }
+        true
+    });
+    scan
 }
 
 /// Resolve a `Loc` to its source file and 1-indexed `[start_line, end_line]`.

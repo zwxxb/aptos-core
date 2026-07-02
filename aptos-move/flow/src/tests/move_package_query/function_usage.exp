@@ -2,15 +2,17 @@
   "called": [
     "0xcafe::math::double"
   ],
-  "called_transitive": [
+  "calledTransitive": [
     "0xcafe::math::add",
     "0xcafe::math::double"
   ],
   "used": [
     "0xcafe::math::double"
   ],
-  "used_transitive": [
+  "usedTransitive": [
     "0xcafe::math::add",
     "0xcafe::math::double"
-  ]
+  ],
+  "createsClosures": [],
+  "invokesFunctionValues": false
 }

@@ -1,0 +1,12 @@
+--- ambiguous ---
+is_error: true
+module name `dup` is ambiguous in the target package: 0xa::dup, 0xb::dup; qualify with an address
+--- qualified ---
+{
+  "called": [],
+  "calledTransitive": [],
+  "used": [],
+  "usedTransitive": [],
+  "createsClosures": [],
+  "invokesFunctionValues": false
+}

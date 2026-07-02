@@ -89,12 +89,12 @@
               "const": "module_summary"
             },
             {
-              "description": "Returns a function-level call graph as a map from each function to the functions it calls.",
+              "description": "Returns a function-level call graph as a map from each function to the\nfunctions it statically calls. Function-value invocations and closure\ncreations are not edges; see the facts query's `invokesFunctionValues`\nand `createsClosures` for those.",
               "type": "string",
               "const": "call_graph"
             },
             {
-              "description": "Returns direct and transitive calls/uses by a given function.\n\"called\" = direct calls; \"used\" = direct calls + closure captures.",
+              "description": "Returns direct and transitive calls/uses by a given function.\n\"called\" = direct calls; \"used\" = direct calls + closure captures.\n`createsClosures` lists functions for which the body creates closures.\n`invokesFunctionValues` is true when the body invokes a function value\nwhose target is not statically known; `called`/`used` are lower bounds then.",
               "type": "string",
               "const": "function_usage"
             },
@@ -108,7 +108,7 @@
       }
     },
     "annotations": {
-      "readOnlyHint": false,
+      "readOnlyHint": true,
       "destructiveHint": false
     }
   },

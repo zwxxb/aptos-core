@@ -1,0 +1,205 @@
+{
+  "0xcafe::acc": {
+    "file": "<TEMPDIR>/acc.move",
+    "span": [
+      1,
+      20
+    ],
+    "friends": [],
+    "attributes": [],
+    "functions": [
+      {
+        "name": "legacy_generic",
+        "file": "<TEMPDIR>/acc.move",
+        "span": [
+          17,
+          19
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "a",
+            "type": "address"
+          }
+        ],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [
+          "0xcafe::acc::Store"
+        ],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [
+          "0xcafe::acc::Store"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::acc::Store<u64>"
+          ],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "read_generic",
+        "file": "<TEMPDIR>/acc.move",
+        "span": [
+          9,
+          11
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [
+          "0xcafe::acc::Store<u64>"
+        ],
+        "writesDeclared": [],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "wild",
+        "file": "<TEMPDIR>/acc.move",
+        "span": [
+          13,
+          15
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [
+          "*"
+        ],
+        "writesDeclared": [],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "write_only",
+        "file": "<TEMPDIR>/acc.move",
+        "span": [
+          5,
+          7
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [
+          "0xcafe::acc::Config"
+        ],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      }
+    ],
+    "structs": [
+      {
+        "kind": "struct",
+        "name": "Config",
+        "file": "<TEMPDIR>/acc.move",
+        "span": [
+          2,
+          2
+        ],
+        "abilities": [
+          "key"
+        ],
+        "typeParams": [],
+        "fields": [
+          {
+            "name": "v",
+            "type": "u64",
+            "positional": false
+          }
+        ],
+        "attributes": []
+      },
+      {
+        "kind": "struct",
+        "name": "Store",
+        "file": "<TEMPDIR>/acc.move",
+        "span": [
+          3,
+          3
+        ],
+        "abilities": [
+          "key"
+        ],
+        "typeParams": [
+          {
+            "name": "T",
+            "abilities": [],
+            "isPhantom": true
+          }
+        ],
+        "fields": [
+          {
+            "name": "v",
+            "type": "u64",
+            "positional": false
+          }
+        ],
+        "attributes": []
+      }
+    ],
+    "constants": []
+  }
+}

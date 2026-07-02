@@ -1,0 +1,73 @@
+{
+  "0xcafe::specs": {
+    "file": "<TEMPDIR>/specs.move",
+    "span": [
+      1,
+      11
+    ],
+    "friends": [],
+    "attributes": [],
+    "functions": [
+      {
+        "name": "check",
+        "file": "<TEMPDIR>/specs.move",
+        "span": [
+          4,
+          10
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "addr",
+            "type": "address"
+          }
+        ],
+        "returnTypes": [
+          "bool"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      }
+    ],
+    "structs": [
+      {
+        "kind": "struct",
+        "name": "R",
+        "file": "<TEMPDIR>/specs.move",
+        "span": [
+          2,
+          2
+        ],
+        "abilities": [
+          "key"
+        ],
+        "typeParams": [],
+        "fields": [
+          {
+            "name": "v",
+            "type": "u64",
+            "positional": false
+          }
+        ],
+        "attributes": []
+      }
+    ],
+    "constants": []
+  }
+}

@@ -1,0 +1,17 @@
+warning[W00001]: DEPRECATED. will be removed
+  ┌─ deprecated_syntax_boundaries_hits.move:4:33
+  │
+4 │     fun get(addr: address): u64 acquires R {
+  │                                 ^^^^^^^^ deprecated Move 1 syntax: `acquires`; acquires annotations are no longer needed
+
+warning[W00001]: DEPRECATED. will be removed
+  ┌─ deprecated_syntax_boundaries_hits.move:5:9
+  │
+5 │         borrow_global<R>(addr).value
+  │         ^^^^^^^^^^^^^^ deprecated Move 1 syntax: `borrow_global<`; use `&T[addr]` instead
+
+warning[W00001]: DEPRECATED. will be removed
+  ┌─ deprecated_syntax_boundaries_hits.move:8:42
+  │
+8 │     fun get_typed(_x: &vector<u64>): u64 acquires R {
+  │                                          ^^^^^^^^ deprecated Move 1 syntax: `acquires`; acquires annotations are no longer needed

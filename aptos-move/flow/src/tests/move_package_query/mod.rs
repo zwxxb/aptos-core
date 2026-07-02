@@ -3,11 +3,26 @@
 
 mod call_graph;
 mod call_graph_closure;
+mod call_graph_compile_error;
 mod call_graph_leaf;
 mod dep_graph;
 mod dep_graph_no_deps;
 mod facts;
+mod facts_access_specifiers;
+mod facts_acquires_transitive;
+mod facts_closure;
+mod facts_closure_invoked;
+mod facts_closure_stored;
+mod facts_compile_error;
+mod facts_function_value;
+mod facts_inline;
+mod facts_lambda_tag;
+mod facts_lifted_acquires;
+mod facts_native;
+mod facts_nested;
+mod facts_spec_block;
 mod function_usage;
+mod function_usage_ambiguous_module;
 mod function_usage_bad_format;
 mod function_usage_bad_function;
 mod function_usage_bad_module;

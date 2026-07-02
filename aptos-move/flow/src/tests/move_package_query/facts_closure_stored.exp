@@ -1,0 +1,176 @@
+{
+  "0xcafe::stored": {
+    "file": "<TEMPDIR>/stored.move",
+    "span": [
+      1,
+      17
+    ],
+    "friends": [],
+    "attributes": [],
+    "functions": [
+      {
+        "name": "read_config_add",
+        "file": "<TEMPDIR>/stored.move",
+        "span": [
+          10,
+          12
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [
+          {
+            "name": "persistent"
+          }
+        ],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "x",
+            "type": "u64"
+          }
+        ],
+        "returnTypes": [
+          "u64"
+        ],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [
+          "0xcafe::stored::Config"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::stored::Config"
+          ],
+          "writes": []
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "register_callback",
+        "file": "<TEMPDIR>/stored.move",
+        "span": [
+          5,
+          7
+        ],
+        "visibility": "internal",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [
+          {
+            "name": "cb",
+            "type": "|u64|u64 has copy + drop + store"
+          }
+        ],
+        "returnTypes": [],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [
+          "0xcafe::stored::Holder"
+        ],
+        "resourceAccess": {
+          "reads": [
+            "0xcafe::stored::Holder"
+          ],
+          "writes": [
+            "0xcafe::stored::Holder"
+          ]
+        },
+        "createsClosures": [],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      },
+      {
+        "name": "setup",
+        "file": "<TEMPDIR>/stored.move",
+        "span": [
+          14,
+          16
+        ],
+        "visibility": "public",
+        "isEntry": false,
+        "isInline": false,
+        "isNative": false,
+        "isView": false,
+        "attributes": [],
+        "typeParams": [],
+        "params": [],
+        "returnTypes": [],
+        "acquiresDeclared": [],
+        "readsDeclared": [],
+        "writesDeclared": [],
+        "acquiresInferred": [
+          "0xcafe::stored::Config",
+          "0xcafe::stored::Holder"
+        ],
+        "resourceAccess": {
+          "reads": [],
+          "writes": []
+        },
+        "createsClosures": [
+          "0xcafe::stored::read_config_add"
+        ],
+        "invokesFunctionValues": false,
+        "effectsComplete": true,
+        "isLambdaLifted": false
+      }
+    ],
+    "structs": [
+      {
+        "kind": "struct",
+        "name": "Config",
+        "file": "<TEMPDIR>/stored.move",
+        "span": [
+          2,
+          2
+        ],
+        "abilities": [
+          "key"
+        ],
+        "typeParams": [],
+        "fields": [
+          {
+            "name": "v",
+            "type": "u64",
+            "positional": false
+          }
+        ],
+        "attributes": []
+      },
+      {
+        "kind": "struct",
+        "name": "Holder",
+        "file": "<TEMPDIR>/stored.move",
+        "span": [
+          3,
+          3
+        ],
+        "abilities": [
+          "key"
+        ],
+        "typeParams": [],
+        "fields": [
+          {
+            "name": "cb",
+            "type": "|u64|u64 has copy + drop + store",
+            "positional": false
+          }
+        ],
+        "attributes": []
+      }
+    ],
+    "constants": []
+  }
+}
