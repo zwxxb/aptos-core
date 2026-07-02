@@ -109,6 +109,12 @@ impl FlowSession {
                 Ok(into_call_tool_result(&result))
             },
             QueryType::Facts => {
+                if data.has_compilation_errors() {
+                    return Err(mcp_err(
+                        "package has compilation errors; facts would reflect a partially \
+                         compiled package. Run move_package_status for diagnostics",
+                    ));
+                }
                 let result = try_call("failed to build facts", || build_facts(data.env()))?;
                 log::info!("move_package_query facts: {} module(s)", result.len());
                 Ok(into_call_tool_result(&result))
