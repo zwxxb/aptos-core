@@ -312,6 +312,36 @@ fn walk_exp_for_spec_blocks(exp: &Exp, diags: &mut Diagnostics) {
                 walk_exp_for_spec_blocks(&arm.value.2, diags);
             }
         },
+        // Struct literals: recurse into each field expression.
+        Exp_::Pack(_, _, fields) => {
+            for (_, e) in fields {
+                walk_exp_for_spec_blocks(e, diags);
+            }
+        },
+        // Vector literals: recurse into each element expression.
+        Exp_::Vector(_, _, args) => {
+            for e in &args.value {
+                walk_exp_for_spec_blocks(e, diags);
+            }
+        },
+        // Higher-order call: recurse into callee and each argument.
+        Exp_::ExpCall(func, args) => {
+            walk_exp_for_spec_blocks(func, diags);
+            for e in &args.value {
+                walk_exp_for_spec_blocks(e, diags);
+            }
+        },
+        // Type-test expression `e is T1 | ..`: recurse into operand.
+        Exp_::Test(e, _) => walk_exp_for_spec_blocks(e, diags),
+        // Spec-only behavior predicates: recurse into target and args.
+        Exp_::Behavior(_, target, args) => {
+            walk_exp_for_spec_blocks(target, diags);
+            for e in &args.value {
+                walk_exp_for_spec_blocks(e, diags);
+            }
+        },
+        // State-labeled spec expression: recurse into inner expression.
+        Exp_::StateLabeled(_, inner, _) => walk_exp_for_spec_blocks(inner, diags),
         _ => {},
     }
 }
@@ -524,6 +554,46 @@ fn walk_spec_exp(exp: &Exp, ctx: &SpecContext, diags: &mut Diagnostics) {
             walk_spec_exp(l, ctx, diags);
             walk_spec_exp(r, ctx, diags);
         },
+        // Struct literals: recurse into each field expression.
+        Exp_::Pack(_, _, fields) => {
+            for (_, e) in fields {
+                walk_spec_exp(e, ctx, diags);
+            }
+        },
+        // Vector literals: recurse into each element expression.
+        Exp_::Vector(_, _, args) => {
+            for e in &args.value {
+                walk_spec_exp(e, ctx, diags);
+            }
+        },
+        // Match expressions: recurse into scrutinee, guards, and arm bodies.
+        Exp_::Match(e, arms) => {
+            walk_spec_exp(e, ctx, diags);
+            for arm in arms {
+                if let Some(guard) = &arm.value.1 {
+                    walk_spec_exp(guard, ctx, diags);
+                }
+                walk_spec_exp(&arm.value.2, ctx, diags);
+            }
+        },
+        // Higher-order call: recurse into callee and each argument.
+        Exp_::ExpCall(func, args) => {
+            walk_spec_exp(func, ctx, diags);
+            for e in &args.value {
+                walk_spec_exp(e, ctx, diags);
+            }
+        },
+        // Type-test expression `e is T1 | ..`: recurse into operand.
+        Exp_::Test(e, _) => walk_spec_exp(e, ctx, diags),
+        // Spec-only behavior predicates: recurse into target and args.
+        Exp_::Behavior(_, target, args) => {
+            walk_spec_exp(target, ctx, diags);
+            for e in &args.value {
+                walk_spec_exp(e, ctx, diags);
+            }
+        },
+        // State-labeled spec expression: recurse into inner expression.
+        Exp_::StateLabeled(_, inner, _) => walk_spec_exp(inner, ctx, diags),
         // Leaf nodes: Name, Value, Unit, Move, Copy, etc.
         _ => {},
     }

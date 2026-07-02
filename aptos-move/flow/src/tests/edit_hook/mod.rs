@@ -10,3 +10,4 @@ mod old_invalid;
 mod old_loop_invariant;
 mod parse_error;
 mod spec_deref_borrow;
+mod spec_walker_coverage;

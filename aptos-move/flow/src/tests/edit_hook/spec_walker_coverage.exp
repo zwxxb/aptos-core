@@ -1,0 +1,23 @@
+error[E04003]: built-in operation not supported
+  ┌─ spec_walker_coverage.move:8:25
+  │
+8 │         ensures (S { x: *r }).x >= result;
+  │                         ^^ dereference `*e` is not allowed in spec expressions
+
+error[E04003]: built-in operation not supported
+   ┌─ spec_walker_coverage.move:15:24
+   │
+15 │         ensures vector[*r] == vector[result];
+   │                        ^^ dereference `*e` is not allowed in spec expressions
+
+error[E04003]: built-in operation not supported
+   ┌─ spec_walker_coverage.move:22:35
+   │
+22 │         S { x: { spec { invariant *r >= 0; }; 1 } }
+   │                                   ^^ dereference `*e` is not allowed in spec expressions
+
+error[E04003]: built-in operation not supported
+   ┌─ spec_walker_coverage.move:28:35
+   │
+28 │         vector[{ spec { invariant *r >= 0; }; 1 }]
+   │                                   ^^ dereference `*e` is not allowed in spec expressions
