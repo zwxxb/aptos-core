@@ -29,8 +29,9 @@ use std::collections::{BTreeMap, BTreeSet};
 /// The compiler's `is_lambda_lifted_fun` uses a substring heuristic
 /// (`name.contains("__lambda__")`), which mistags user functions whose names
 /// merely contain the marker string (e.g. `run__lambda__step`). We additionally
-/// require the generated shape `__lambda__<digits>__...` (see
-/// `LIFTED_FUN_MARKER` usage in `lambda_lifter.rs`).
+/// require the generated shape `__lambda__<digits><suffix>__<host>` produced by
+/// `gen_closure_function_name` in `lambda_lifter.rs`, where the suffix is empty
+/// for regular lifting and e.g. `_inline_..` for inliner-lifted lambdas.
 fn is_lifted_closure(func: &FunctionEnv<'_>) -> bool {
     if !is_lambda_lifted(func) {
         return false;
@@ -40,7 +41,7 @@ fn is_lifted_closure(func: &FunctionEnv<'_>) -> bool {
         return false;
     };
     let digits = rest.chars().take_while(|c| c.is_ascii_digit()).count();
-    digits > 0 && rest[digits..].starts_with("__")
+    digits > 0 && rest[digits..].contains("__")
 }
 
 // ========== MCP Tool types ==========
