@@ -230,24 +230,26 @@ struct FunctionSummary {
 fn function_signature(env: &GlobalEnv, func: &FunctionEnv<'_>) -> String {
     let type_ctx = qualified_type_ctx(func.get_type_display_ctx());
     let symbol_pool = env.symbol_pool();
-    let mut s = String::new();
 
+    let mut parts: Vec<String> = Vec::new();
     // Visibility — omit "internal" (private functions have no keyword)
     let vis = visibility_str(func);
     if vis != "internal" {
-        s.push_str(&vis);
+        parts.push(vis);
     }
-
     // Modifiers: entry and inline are mutually exclusive (FunctionKind)
     if func.is_entry() {
-        s.push_str(" entry");
+        parts.push("entry".to_string());
     } else if func.is_inline() {
-        s.push_str(" inline");
+        parts.push("inline".to_string());
     }
     if func.is_native() {
-        s.push_str(" native");
+        parts.push("native".to_string());
     }
-    s.push_str(" fun ");
+    parts.push("fun".to_string());
+
+    let mut s = parts.join(" ");
+    s.push(' ');
     s.push_str(&func.get_name_str());
 
     // Type parameters with ability constraints

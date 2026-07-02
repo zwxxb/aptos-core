@@ -45,7 +45,12 @@ fn read_package_name(path: &Path) -> Option<String> {
     for line in content.lines() {
         let trimmed = line.trim();
         if trimmed.starts_with('[') {
-            in_package_section = trimmed == "[package]";
+            // Tolerate trailing comments and inner whitespace: `[ package ] # x`.
+            let header = trimmed.split('#').next().unwrap_or("").trim();
+            in_package_section = header
+                .strip_prefix('[')
+                .and_then(|h| h.strip_suffix(']'))
+                .is_some_and(|h| h.trim() == "package");
             continue;
         }
         if !in_package_section {
@@ -114,6 +119,15 @@ mod tests {
         let toml = dir.path().join("Move.toml");
         std::fs::write(&toml, "[dependencies]\n").unwrap();
         assert_eq!(read_package_name(&toml), None);
+    }
+
+    #[test]
+    fn test_read_package_name_tolerant_section_header() {
+        // `[ package ] # comment` is valid TOML and must still be recognized.
+        let dir = tempfile::tempdir().unwrap();
+        let toml = dir.path().join("Move.toml");
+        std::fs::write(&toml, "[ package ] # metadata\nname = \"pkg\"\n").unwrap();
+        assert_eq!(read_package_name(&toml), Some("pkg".to_string()));
     }
 
     #[test]
