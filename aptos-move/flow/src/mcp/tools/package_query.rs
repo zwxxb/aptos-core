@@ -21,6 +21,25 @@ use rmcp::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 
+/// Returns true only for compiler-synthesized lambda-lifted functions.
+///
+/// The compiler's `is_lambda_lifted_fun` uses a substring heuristic
+/// (`name.contains("__lambda__")`), which mistags user functions whose names
+/// merely contain the marker string (e.g. `run__lambda__step`). We additionally
+/// require the generated shape `__lambda__<digits>__...` (see
+/// `LIFTED_FUN_MARKER` usage in `lambda_lifter.rs`).
+fn is_lifted_closure(func: &FunctionEnv<'_>) -> bool {
+    if !is_lambda_lifted(func) {
+        return false;
+    }
+    let name = func.get_name_str();
+    let Some(rest) = name.strip_prefix("__lambda__") else {
+        return false;
+    };
+    let digits = rest.chars().take_while(|c| c.is_ascii_digit()).count();
+    digits > 0 && rest[digits..].starts_with("__")
+}
+
 // ========== MCP Tool types ==========
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
@@ -222,7 +241,7 @@ fn build_module_summary(env: &GlobalEnv) -> BTreeMap<String, ModuleSummary> {
                 .map(|f| FunctionSummary {
                     name: f.get_name_str(),
                     signature: f.get_header_string(),
-                    is_lambda_lifted: is_lambda_lifted(&f),
+                    is_lambda_lifted: is_lifted_closure(&f),
                 })
                 .collect();
 
@@ -492,7 +511,7 @@ fn defining_functions(
 ) -> BTreeMap<QualifiedId<FunId>, String> {
     let mut result = BTreeMap::new();
     for f in module.get_functions() {
-        if !is_lambda_lifted(&f) {
+        if !is_lifted_closure(&f) {
             continue;
         }
         let lifted = f.get_qualified_id();
@@ -510,7 +529,7 @@ fn defining_functions(
                 break None;
             }
             let host_env = env.get_function(host);
-            if !is_lambda_lifted(&host_env) {
+            if !is_lifted_closure(&host_env) {
                 break Some(host_env.get_name_str());
             }
             current = host;
@@ -578,7 +597,7 @@ fn build_function_facts(
         return_types,
         acquires_inferred,
         resource_access,
-        is_lambda_lifted: is_lambda_lifted(func),
+        is_lambda_lifted: is_lifted_closure(func),
         defined_in: defined_in.get(&func.get_qualified_id()).cloned(),
     }
 }

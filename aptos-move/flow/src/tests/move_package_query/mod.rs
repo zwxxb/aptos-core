@@ -9,6 +9,7 @@ mod dep_graph_no_deps;
 mod facts;
 mod facts_closure;
 mod facts_compile_error;
+mod facts_lambda_tag;
 mod facts_nested;
 mod function_usage;
 mod function_usage_bad_format;
