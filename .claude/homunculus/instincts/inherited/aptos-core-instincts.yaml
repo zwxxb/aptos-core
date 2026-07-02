@@ -1,0 +1,516 @@
+# Instincts generated from https://github.com/zwxxb/aptos-core
+# Generated: 2026-07-02T18:22:30.330Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: aptos-core-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/zwxxb/aptos-core
+---
+
+# Aptos Core Commit Length
+
+## Action
+
+Write moderate-length commit messages (~59 characters)
+
+## Evidence
+
+- Average commit message length: 59 chars
+- Based on 19 commits
+
+---
+id: aptos-core-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/zwxxb/aptos-core
+---
+
+# Aptos Core Naming Files
+
+## Action
+
+Use snake_case naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: snake_case
+
+---
+id: aptos-core-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/zwxxb/aptos-core
+---
+
+# Aptos Core Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: aptos-core-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/zwxxb/aptos-core
+---
+
+# Aptos Core Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: aptos-core-arch-type-based
+trigger: "when adding new code"
+confidence: 0.8
+domain: architecture
+source: repo-analysis
+source_repo: https://github.com/zwxxb/aptos-core
+---
+
+# Aptos Core Arch Type Based
+
+## Action
+
+Place code in the appropriate type folder (components/, services/, utils/, etc.)
+
+## Evidence
+
+- Type-based module organization detected
+- Folders: 
+
+---
+id: aptos-core-test-naming
+trigger: "when creating a test file"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/zwxxb/aptos-core
+---
+
+# Aptos Core Test Naming
+
+## Action
+
+Name test files using the pattern: *.test.ts
+
+## Evidence
+
+- File pattern: *.test.ts
+- Consistent across test files
+
+---
+id: aptos-core-workflow-feature-development
+trigger: "when implementing a new feature"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/zwxxb/aptos-core
+---
+
+# Aptos Core Workflow Feature Development
+
+## Action
+
+Follow the feature-development workflow:
+1. Add feature implementation
+2. Add tests for feature
+3. Update documentation
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~8x per month
+- Files: **/*.test.*
+
+---
+id: aptos-core-workflow-extend-move-flow-package-query-and-update-golden-tests
+trigger: "when doing extend move flow package query and update golden tests"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/zwxxb/aptos-core
+---
+
+# Aptos Core Workflow Extend Move Flow Package Query And Update Golden Tests
+
+## Action
+
+Follow the extend-move-flow-package-query-and-update-golden-tests workflow:
+1. Edit or extend logic in aptos-move/flow/src/mcp/tools/package_query.rs
+2. Add or update .exp and .rs golden test files in aptos-move/flow/src/tests/move_package_query/
+3. Update mod.rs in the same test directory to register new tests
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~6x per month
+- Files: aptos-move/flow/src/mcp/tools/package_query.rs, aptos-move/flow/src/tests/move_package_query/*.exp, aptos-move/flow/src/tests/move_package_query/*.rs
+
+---
+id: aptos-core-workflow-add-or-update-edit-hook-and-tests
+trigger: "when doing add or update edit hook and tests"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/zwxxb/aptos-core
+---
+
+# Aptos Core Workflow Add Or Update Edit Hook And Tests
+
+## Action
+
+Follow the add-or-update-edit-hook-and-tests workflow:
+1. Edit or extend logic in aptos-move/flow/src/hooks/source_check.rs and/or aptos-move/flow/src/hooks/package_path.rs
+2. Add or update .exp and .rs golden test files in aptos-move/flow/src/tests/edit_hook/
+3. Update mod.rs in the same test directory to register new tests
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: aptos-move/flow/src/hooks/source_check.rs, aptos-move/flow/src/hooks/package_path.rs, aptos-move/flow/src/tests/edit_hook/*.exp
+
+---
+id: aptos-core-workflow-add-design-spec-or-plan-documentation
+trigger: "when doing add design spec or plan documentation"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/zwxxb/aptos-core
+---
+
+# Aptos Core Workflow Add Design Spec Or Plan Documentation
+
+## Action
+
+Follow the add-design-spec-or-plan-documentation workflow:
+1. Create a new markdown file in docs/superpowers/specs/ or docs/superpowers/plans/
+2. Write the design spec or plan
+3. Commit the new documentation file
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: docs/superpowers/specs/*.md, docs/superpowers/plans/*.md
+
+---
+id: aptos-core-instinct-file-naming
+trigger: "When creating or renaming a source file"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct File Naming
+
+## Action
+
+Use snake_case for file names
+
+## Evidence
+
+- Pattern in files: aptos-move/flow/src/mcp/session.rs
+- Naming conventions: files = snake_case
+
+---
+id: aptos-core-instinct-function-naming
+trigger: "When defining a new function"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Function Naming
+
+## Action
+
+Use camelCase for function names
+
+## Evidence
+
+- Naming conventions: functions = camelCase
+
+---
+id: aptos-core-instinct-class-naming
+trigger: "When defining a new class or struct"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Class Naming
+
+## Action
+
+Use PascalCase for class/struct names
+
+## Evidence
+
+- Naming conventions: classes = PascalCase
+
+---
+id: aptos-core-instinct-constant-naming
+trigger: "When defining a constant"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Constant Naming
+
+## Action
+
+Use SCREAMING_SNAKE_CASE for constant names
+
+## Evidence
+
+- Naming conventions: constants = SCREAMING_SNAKE_CASE
+
+---
+id: aptos-core-instinct-import-style
+trigger: "When importing modules in Rust code"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Import Style
+
+## Action
+
+Use relative imports
+
+## Evidence
+
+- importStyle: relative
+
+---
+id: aptos-core-instinct-export-style
+trigger: "When exporting from a module"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Export Style
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- exportStyle: named
+
+---
+id: aptos-core-instinct-test-location
+trigger: "When adding tests for a feature"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Test Location
+
+## Action
+
+Place test files in the same package, using a mixed location strategy
+
+## Evidence
+
+- testLocation: mixed
+- Pattern in files: aptos-move/flow/src/tests/
+
+---
+id: aptos-core-instinct-test-pattern
+trigger: "When naming test files"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Test Pattern
+
+## Action
+
+Use the pattern *.test.ts for test files
+
+## Evidence
+
+- filePattern: *.test.ts
+
+---
+id: aptos-core-instinct-golden-test-update
+trigger: "When modifying logic in package_query or edit hooks"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Golden Test Update
+
+## Action
+
+Update or add corresponding .exp and .rs golden test files and register them in mod.rs
+
+## Evidence
+
+- Workflow: extend-move-flow-package-query-and-update-golden-tests
+- Workflow: add-or-update-edit-hook-and-tests
+- Pattern in files: aptos-move/flow/src/tests/move_package_query/*.exp
+
+---
+id: aptos-core-instinct-unit-tests
+trigger: "When writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Unit Tests
+
+## Action
+
+Write unit tests
+
+## Evidence
+
+- testTypes: unit
+
+---
+id: aptos-core-instinct-commit-format
+trigger: "When writing a commit message"
+confidence: 0.8
+domain: git
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Commit Format
+
+## Action
+
+Start with a lowercase verb or [move-flow] tag, optionally followed by a short description and details separated by +
+
+## Evidence
+
+- Example commit: fix attrs,type and returnTypes qualification + add lambda tagging + read-only hint
+- Example commit: [move-flow] Add facts-soundness design spec and plan
+
+---
+id: aptos-core-instinct-feature-workflow
+trigger: "When implementing a new feature"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Feature Workflow
+
+## Action
+
+Add feature implementation, then add tests, then update documentation
+
+## Evidence
+
+- Workflow: feature-development
+- Commit sequence: Add feature implementation → Add tests for feature → Update documentation
+
+---
+id: aptos-core-instinct-extend-package-query-workflow
+trigger: "When someone adds or changes facts, effect models, or related features in Move Flow's package_query"
+confidence: 0.95
+domain: workflow
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Extend Package Query Workflow
+
+## Action
+
+Edit or extend logic in aptos-move/flow/src/mcp/tools/package_query.rs, update or add .exp and .rs golden test files in aptos-move/flow/src/tests/move_package_query/, and update mod.rs to register new tests
+
+## Evidence
+
+- Workflow: extend-move-flow-package-query-and-update-golden-tests
+- Pattern in files: aptos-move/flow/src/mcp/tools/package_query.rs
+
+---
+id: aptos-core-instinct-edit-hook-workflow
+trigger: "When someone adds or fixes edit-hook logic for Move source or package files"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Edit Hook Workflow
+
+## Action
+
+Edit or extend logic in aptos-move/flow/src/hooks/source_check.rs and/or aptos-move/flow/src/hooks/package_path.rs, update or add .exp and .rs golden test files in aptos-move/flow/src/tests/edit_hook/, and update mod.rs to register new tests
+
+## Evidence
+
+- Workflow: add-or-update-edit-hook-and-tests
+- Pattern in files: aptos-move/flow/src/hooks/source_check.rs
+
+---
+id: aptos-core-instinct-design-spec-workflow
+trigger: "When someone wants to document a new feature, plan, or audit for Move Flow"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: zwxxb/aptos-core
+---
+
+# Aptos Core Instinct Design Spec Workflow
+
+## Action
+
+Create a new markdown file in docs/superpowers/specs/ or docs/superpowers/plans/, write the design spec or plan, and commit the new documentation file
+
+## Evidence
+
+- Workflow: add-design-spec-or-plan-documentation
+- Pattern in files: docs/superpowers/specs/*.md
+
