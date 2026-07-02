@@ -3,6 +3,7 @@
 
 mod clean;
 mod deprecated_syntax;
+mod deprecated_syntax_boundaries;
 mod deprecated_syntax_contexts;
 mod format;
 mod old_invalid;

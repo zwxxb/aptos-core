@@ -673,6 +673,20 @@ fn ignored_context_mask(source: &str) -> Vec<bool> {
     ignored
 }
 
+/// Return `true` when the match at `start` is a bare (unqualified, non-receiver)
+/// use of a storage builtin.
+///
+/// The storage builtins only appear as bare calls; a match preceded by an
+/// identifier character, `.` (receiver call), or `:` (qualified path) is a
+/// user-defined name.
+fn is_bare_builtin_use(source: &str, start: usize) -> bool {
+    if start == 0 {
+        return true;
+    }
+    let prev = source.as_bytes()[start - 1];
+    !(prev.is_ascii_alphanumeric() || prev == b'_' || prev == b'.' || prev == b':')
+}
+
 /// Scan source text for deprecated Move 1 global-storage operations.
 fn text_checks(source: &str, file_hash: FileHash) -> Diagnostics {
     let mut diags = Diagnostics::new();
@@ -684,12 +698,22 @@ fn text_checks(source: &str, file_hash: FileHash) -> Diagnostics {
                 continue;
             }
 
+            // For `borrow_global<` / `borrow_global_mut<`: skip matches where
+            // the preceding byte is an identifier character, `.`, or `:` —
+            // those are user-defined names, not the builtin.
+            if pattern == "borrow_global<" || pattern == "borrow_global_mut<" {
+                if !is_bare_builtin_use(source, start) {
+                    continue;
+                }
+            }
+
             // For `acquires`, only match if it looks like a keyword (preceded by
-            // whitespace or line start, followed by whitespace or `{`).
+            // whitespace, `)`, `>`, or line start, followed by whitespace or `{`).
             if pattern == "acquires" {
                 let before_ok = start == 0
                     || source.as_bytes()[start - 1].is_ascii_whitespace()
-                    || source.as_bytes()[start - 1] == b')';
+                    || source.as_bytes()[start - 1] == b')'
+                    || source.as_bytes()[start - 1] == b'>';
                 let end = start + pattern.len();
                 let after_ok = end >= source.len()
                     || source.as_bytes()[end].is_ascii_whitespace()

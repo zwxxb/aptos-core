@@ -33,21 +33,37 @@ pub fn run() -> Result<()> {
     Ok(())
 }
 
-/// Read the package name from a `Move.toml` file by simple line scanning.
+/// Read the package name from `Move.toml` by line scanning: only the exact
+/// `name` key inside the `[package]` section counts, and inline comments are
+/// stripped. Not a full TOML parser — good enough for well-formed manifests.
+///
+/// Note: `split('#')` inside a quoted value containing `#` would incorrectly
+/// trim — acceptable because package names do not contain `#` in practice.
 fn read_package_name(path: &Path) -> Option<String> {
     let content = std::fs::read_to_string(path).ok()?;
+    let mut in_package_section = false;
     for line in content.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("name") {
-            let value = trimmed.split_once('=')?.1.trim();
-            // Strip surrounding quotes
-            let name = value
-                .trim_start_matches('"')
-                .trim_end_matches('"')
-                .trim_start_matches('\'')
-                .trim_end_matches('\'');
-            return Some(name.to_string());
+        if trimmed.starts_with('[') {
+            in_package_section = trimmed == "[package]";
+            continue;
         }
+        if !in_package_section {
+            continue;
+        }
+        let Some((key, value)) = trimmed.split_once('=') else {
+            continue;
+        };
+        if key.trim() != "name" {
+            continue;
+        }
+        let value = value.split('#').next().unwrap_or("").trim();
+        let name = value
+            .trim_start_matches('"')
+            .trim_end_matches('"')
+            .trim_start_matches('\'')
+            .trim_end_matches('\'');
+        return Some(name.to_string());
     }
     None
 }
@@ -97,6 +113,44 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let toml = dir.path().join("Move.toml");
         std::fs::write(&toml, "[dependencies]\n").unwrap();
+        assert_eq!(read_package_name(&toml), None);
+    }
+
+    #[test]
+    fn test_read_package_name_ignores_other_sections() {
+        // `namespace` in [addresses] must not be mistaken for the package name.
+        let dir = tempfile::tempdir().unwrap();
+        let toml = dir.path().join("Move.toml");
+        std::fs::write(
+            &toml,
+            "[addresses]\nnamespace = \"wrong\"\n[package]\nname = \"right\"\n",
+        )
+        .unwrap();
+        assert_eq!(read_package_name(&toml), Some("right".to_string()));
+    }
+
+    #[test]
+    fn test_read_package_name_strips_inline_comment() {
+        let dir = tempfile::tempdir().unwrap();
+        let toml = dir.path().join("Move.toml");
+        std::fs::write(&toml, "[package]\nname = \"pkg\"  # legacy\n").unwrap();
+        assert_eq!(read_package_name(&toml), Some("pkg".to_string()));
+    }
+
+    #[test]
+    fn test_read_package_name_no_package_section() {
+        let dir = tempfile::tempdir().unwrap();
+        let toml = dir.path().join("Move.toml");
+        std::fs::write(&toml, "[dependencies]\nsome_dep = {}\n").unwrap();
+        assert_eq!(read_package_name(&toml), None);
+    }
+
+    #[test]
+    fn test_read_package_name_names_key_not_matched() {
+        // `names = "x"` is not the `name` key — must not match.
+        let dir = tempfile::tempdir().unwrap();
+        let toml = dir.path().join("Move.toml");
+        std::fs::write(&toml, "[package]\nnames = \"x\"\n").unwrap();
         assert_eq!(read_package_name(&toml), None);
     }
 }
