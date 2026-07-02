@@ -404,6 +404,20 @@ struct ResourceAccessFacts {
     writes: Vec<String>,
 }
 
+/// Per-function facts.
+///
+/// Effect-model contract:
+/// - `acquiresInferred` is the compiler-checked value: post-inlining,
+///   pre-lambda-lifting, same-module resources only, no type arguments.
+///   Lambda bodies count toward the enclosing function (language rule).
+///   For lambda-lifted functions it is recomputed with the same rule.
+/// - `resourceAccess` covers this body only, fully qualified with type
+///   arguments; `exists<T>` is a read but never an acquire. Cross-module
+///   resources appear here but never in `acquiresInferred`.
+/// - Inline function bodies are expanded into callers before analysis:
+///   callers legitimately absorb the effects, and the inline definition
+///   also reports its own. Do not double-count.
+/// - When `effectsComplete` is false, all effect fields are lower bounds.
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct FunctionFacts {
@@ -564,10 +578,7 @@ fn defining_functions(
 /// direct borrow_global/borrow_global_mut/move_from of same-module structs,
 /// joined with same-module static callees, to a fixpoint across the module's
 /// lifted functions (non-lifted callees use their compiler-stored value).
-fn lifted_acquires(
-    env: &GlobalEnv,
-    module: &ModuleEnv<'_>,
-) -> BTreeMap<FunId, BTreeSet<StructId>> {
+fn lifted_acquires(env: &GlobalEnv, module: &ModuleEnv<'_>) -> BTreeMap<FunId, BTreeSet<StructId>> {
     let mid = module.get_id();
     let mut result: BTreeMap<FunId, BTreeSet<StructId>> = BTreeMap::new();
     let mut callees: BTreeMap<FunId, BTreeSet<FunId>> = BTreeMap::new();
@@ -610,9 +621,7 @@ fn lifted_acquires(
                 match result.get(callee) {
                     Some(lifted) => acc.extend(lifted.iter().copied()),
                     None => {
-                        if let Some(stored) =
-                            module.get_function(*callee).get_acquired_structs()
-                        {
+                        if let Some(stored) = module.get_function(*callee).get_acquired_structs() {
                             acc.extend(stored.iter().copied());
                         }
                     },
@@ -939,23 +948,16 @@ fn scan_body(
                 _ => {},
             },
             ExpData::Invoke(_, callee, _)
-                if matches!(pos, VisitorPosition::Pre)
-                    && spec_depth == 0
-                    && lambda_depth == 0 =>
+                if matches!(pos, VisitorPosition::Pre) && spec_depth == 0 && lambda_depth == 0 =>
             {
                 // Invoking a closure built in place has a known target whose
                 // facts carry the effects; anything else is unknown.
-                if !matches!(
-                    callee.as_ref(),
-                    ExpData::Call(_, Operation::Closure(..), _)
-                ) {
+                if !matches!(callee.as_ref(), ExpData::Call(_, Operation::Closure(..), _)) {
                     scan.invokes_function_values = true;
                 }
             },
             ExpData::Call(node_id, op, _)
-                if matches!(pos, VisitorPosition::Pre)
-                    && spec_depth == 0
-                    && lambda_depth == 0 =>
+                if matches!(pos, VisitorPosition::Pre) && spec_depth == 0 && lambda_depth == 0 =>
             {
                 if let Operation::Closure(mid, fid, _) = op {
                     scan.creates_closures.insert(
@@ -966,8 +968,9 @@ fn scan_body(
                     let (does_read, does_write) = match op {
                         Operation::Exists(_)
                         | Operation::BorrowGlobal(ReferenceKind::Immutable) => (true, false),
-                        Operation::BorrowGlobal(ReferenceKind::Mutable)
-                        | Operation::MoveFrom => (true, true),
+                        Operation::BorrowGlobal(ReferenceKind::Mutable) | Operation::MoveFrom => {
+                            (true, true)
+                        },
                         Operation::MoveTo => (false, true),
                         _ => (false, false),
                     };
