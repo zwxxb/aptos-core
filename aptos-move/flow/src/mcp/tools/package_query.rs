@@ -9,7 +9,7 @@ use super::super::{
 };
 use move_compiler_v2::env_pipeline::lambda_lifter::is_lambda_lifted_fun as is_lambda_lifted;
 use move_model::{
-    ast::{Attribute, AttributeValue, ExpData, Operation},
+    ast::{Attribute, AttributeValue, ExpData, Operation, Value},
     model::{
         FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, NamedConstantEnv, QualifiedId, StructEnv,
         TypeParameter, Visibility,
@@ -474,7 +474,7 @@ fn build_constant_summary(env: &GlobalEnv, c: &NamedConstantEnv<'_>) -> Constant
     ConstantSummary {
         name: c.get_name().display(env.symbol_pool()).to_string(),
         type_: c.get_type().display(&ctx).to_string(),
-        value: env.display(&c.get_value()).to_string(),
+        value: value_to_move_source(env, &c.get_value()),
     }
 }
 
@@ -679,11 +679,11 @@ fn attr_to_facts(env: &GlobalEnv, attr: &Attribute) -> AttributeFacts {
     }
 }
 
-/// Render an attribute value: literals via the model's value display, named
+/// Render an attribute value: literals via `value_to_move_source`, named
 /// paths as fully-qualified `address::module::name` (or a bare name).
 fn attr_value_to_string(env: &GlobalEnv, val: &AttributeValue) -> String {
     match val {
-        AttributeValue::Value(_, v) => env.display(v).to_string(),
+        AttributeValue::Value(_, v) => value_to_move_source(env, v),
         AttributeValue::Name(_, module_opt, sym) => {
             let name = sym.display(env.symbol_pool()).to_string();
             match module_opt {
@@ -691,6 +691,36 @@ fn attr_value_to_string(env: &GlobalEnv, val: &AttributeValue) -> String {
                 None => name,
             }
         },
+    }
+}
+
+/// Render a Move `Value` as source-shaped syntax. Byte strings become
+/// `x"…"` (always-valid Move literal). Vectors recurse and render as
+/// `vector[…]`. Scalars (numbers, bools, addresses) go through
+/// `env.display`, which is already correct for them. `AddressArray` and
+/// `Tuple` fall back to `env.display` (Rust `Debug`) — leave them until a
+/// real case shows up.
+fn value_to_move_source(env: &GlobalEnv, val: &Value) -> String {
+    use std::fmt::Write as _;
+    match val {
+        Value::ByteArray(bytes) => {
+            let mut s = String::with_capacity(3 + bytes.len() * 2);
+            s.push_str("x\"");
+            for b in bytes {
+                let _ = write!(s, "{:02x}", b);
+            }
+            s.push('"');
+            s
+        },
+        Value::Vector(vs) => {
+            let inner = vs
+                .iter()
+                .map(|v| value_to_move_source(env, v))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("vector[{inner}]")
+        },
+        _ => env.display(val).to_string(),
     }
 }
 
